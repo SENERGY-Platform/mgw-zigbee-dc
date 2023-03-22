@@ -1,8 +1,4 @@
 mgw-zigbee-dc
 .idea/
 *.iml
-docker-compose/mosquitto-data
-docker-compose/zigbee2mqtt-data-backup
-docker-compose/zigbee2mqtt-data/log
-docker-compose/zigbee2mqtt-data/database.db
-docker-compose/zigbee2mqtt-data/state.json
+docker-compose
