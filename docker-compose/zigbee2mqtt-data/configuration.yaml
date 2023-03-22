@@ -1,0 +1,19 @@
+permit_join: true
+mqtt:
+  base_topic: zigbee2mqtt
+  server: mqtt://mqtt
+  keepalive: 60
+  reject_unauthorized: true
+  version: 4
+  include_device_information: false
+serial:
+  port: /dev/ttyACM0
+frontend:
+  port: 8080
+advanced:
+  legacy_api: false
+  legacy_availability_payload: false
+homeassistant: false
+devices:
+  '0x00178801020a70e7':
+    friendly_name: '0x00178801020a70e7'
