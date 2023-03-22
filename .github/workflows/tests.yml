@@ -1,0 +1,30 @@
+name: Tests
+on:
+  push:
+    branches:
+      - master
+      - main
+      - dev
+    pull_request:
+      branches:
+        - master
+        - main
+        - dev
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.20
+
+      - name: Build
+        run: go build -v --tags=ci ./...
+
+      - name: Test
+        timeout-minutes: 120
+        run: go test -timeout 99999s --tags=ci ./...

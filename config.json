@@ -1,0 +1,31 @@
+{
+    "connector_id":"mgw-zigbee-dc",
+
+    "device_id_prefix": "zigbee:",
+
+    "mgw_mqtt_broker":"tcp://message-broker:1883",
+    "mgw_mqtt_client_id":"mgw-zwave-dc_mgw",
+    "mgw_mqtt_user":"",
+    "mgw_mqtt_pw":"",
+
+    "zigbee_mqtt_broker":"tcp://message-broker:1883",
+    "zigbee_mqtt_client_id":"mgw-zigbee-dc_zwave",
+    "zigbee_mqtt_user":"",
+    "zigbee_mqtt_pw":"",
+
+    "zigbee_qos": 2,
+
+    "zigbee_mqtt_topic_prefix": "zigbee2mqtt/",
+
+    "event_refresh_interval": "1h",
+
+    "auth_endpoint": "https://auth.senergy.infai.org",
+    "auth_client_id": "client-connector-lib",
+    "auth_expiration_time_buffer": 2,
+    "auth_user_name": "",
+    "auth_password": "",
+    "fallback_file": "devicerepo_fallback.json",
+    "permissions_search_url": "https://api.senergy.infai.org/permissions/query",
+    "min_cache_duration": "1m",
+    "max_cache_duration": "1h"
+}

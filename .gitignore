@@ -1,0 +1,5 @@
+mgw-zigbee-dc
+.idea/
+*.iml
+docker-compose/zigbee2mqtt-data
+docker-compose/mosquitto-data

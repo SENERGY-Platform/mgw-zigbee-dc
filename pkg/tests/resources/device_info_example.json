@@ -1,0 +1,303 @@
+[
+    {
+        "definition": null,
+        "disabled": false,
+        "endpoints": {
+            "1": {
+                "bindings": [],
+                "clusters": {
+                    "input": [
+                        "genBasic",
+                        "genTime",
+                        "genOta"
+                    ],
+                    "output": [
+                        "genPowerCfg",
+                        "genPollCtrl",
+                        "ssIasZone"
+                    ]
+                },
+                "configured_reportings": [],
+                "scenes": []
+            },
+            "242": {
+                "bindings": [],
+                "clusters": {
+                    "input": [],
+                    "output": [
+                        "greenPower"
+                    ]
+                },
+                "configured_reportings": [],
+                "scenes": []
+            }
+        },
+        "friendly_name": "Coordinator",
+        "ieee_address": "0x00212effff093b38",
+        "interview_completed": true,
+        "interviewing": false,
+        "network_address": 0,
+        "supported": false,
+        "type": "Coordinator"
+    },
+    {
+        "date_code": "20210331",
+        "definition": {
+            "description": "Hue white and color ambiance E26/E27/E14",
+            "exposes": [
+                {
+                    "features": [
+                        {
+                            "access": 7,
+                            "description": "On/off state of this light",
+                            "name": "state",
+                            "property": "state",
+                            "type": "binary",
+                            "value_off": "OFF",
+                            "value_on": "ON",
+                            "value_toggle": "TOGGLE"
+                        },
+                        {
+                            "access": 7,
+                            "description": "Brightness of this light",
+                            "name": "brightness",
+                            "property": "brightness",
+                            "type": "numeric",
+                            "value_max": 254,
+                            "value_min": 0
+                        },
+                        {
+                            "access": 7,
+                            "description": "Color temperature of this light",
+                            "name": "color_temp",
+                            "presets": [
+                                {
+                                    "description": "Coolest temperature supported",
+                                    "name": "coolest",
+                                    "value": 153
+                                },
+                                {
+                                    "description": "Cool temperature (250 mireds / 4000 Kelvin)",
+                                    "name": "cool",
+                                    "value": 250
+                                },
+                                {
+                                    "description": "Neutral temperature (370 mireds / 2700 Kelvin)",
+                                    "name": "neutral",
+                                    "value": 370
+                                },
+                                {
+                                    "description": "Warm temperature (454 mireds / 2200 Kelvin)",
+                                    "name": "warm",
+                                    "value": 454
+                                },
+                                {
+                                    "description": "Warmest temperature supported",
+                                    "name": "warmest",
+                                    "value": 500
+                                }
+                            ],
+                            "property": "color_temp",
+                            "type": "numeric",
+                            "unit": "mired",
+                            "value_max": 500,
+                            "value_min": 153
+                        },
+                        {
+                            "access": 7,
+                            "description": "Color temperature after cold power on of this light",
+                            "name": "color_temp_startup",
+                            "presets": [
+                                {
+                                    "description": "Coolest temperature supported",
+                                    "name": "coolest",
+                                    "value": 153
+                                },
+                                {
+                                    "description": "Cool temperature (250 mireds / 4000 Kelvin)",
+                                    "name": "cool",
+                                    "value": 250
+                                },
+                                {
+                                    "description": "Neutral temperature (370 mireds / 2700 Kelvin)",
+                                    "name": "neutral",
+                                    "value": 370
+                                },
+                                {
+                                    "description": "Warm temperature (454 mireds / 2200 Kelvin)",
+                                    "name": "warm",
+                                    "value": 454
+                                },
+                                {
+                                    "description": "Warmest temperature supported",
+                                    "name": "warmest",
+                                    "value": 500
+                                },
+                                {
+                                    "description": "Restore previous color_temp on cold power on",
+                                    "name": "previous",
+                                    "value": 65535
+                                }
+                            ],
+                            "property": "color_temp_startup",
+                            "type": "numeric",
+                            "unit": "mired",
+                            "value_max": 500,
+                            "value_min": 153
+                        },
+                        {
+                            "description": "Color of this light in the CIE 1931 color space (x/y)",
+                            "features": [
+                                {
+                                    "access": 7,
+                                    "name": "x",
+                                    "property": "x",
+                                    "type": "numeric"
+                                },
+                                {
+                                    "access": 7,
+                                    "name": "y",
+                                    "property": "y",
+                                    "type": "numeric"
+                                }
+                            ],
+                            "name": "color_xy",
+                            "property": "color",
+                            "type": "composite"
+                        },
+                        {
+                            "description": "Color of this light expressed as hue/saturation",
+                            "features": [
+                                {
+                                    "access": 7,
+                                    "name": "hue",
+                                    "property": "hue",
+                                    "type": "numeric"
+                                },
+                                {
+                                    "access": 7,
+                                    "name": "saturation",
+                                    "property": "saturation",
+                                    "type": "numeric"
+                                }
+                            ],
+                            "name": "color_hs",
+                            "property": "color",
+                            "type": "composite"
+                        }
+                    ],
+                    "type": "light"
+                },
+                {
+                    "access": 2,
+                    "description": "Triggers an effect on the light (e.g. make light blink for a few seconds)",
+                    "name": "effect",
+                    "property": "effect",
+                    "type": "enum",
+                    "values": [
+                        "blink",
+                        "breathe",
+                        "okay",
+                        "channel_change",
+                        "finish_effect",
+                        "stop_effect"
+                    ]
+                },
+                {
+                    "access": 7,
+                    "description": "Controls the behavior when the device is powered on after power loss",
+                    "name": "power_on_behavior",
+                    "property": "power_on_behavior",
+                    "type": "enum",
+                    "values": [
+                        "off",
+                        "on",
+                        "toggle",
+                        "previous"
+                    ]
+                },
+                {
+                    "access": 1,
+                    "description": "Link quality (signal strength)",
+                    "name": "linkquality",
+                    "property": "linkquality",
+                    "type": "numeric",
+                    "unit": "lqi",
+                    "value_max": 255,
+                    "value_min": 0
+                }
+            ],
+            "model": "9290012573A",
+            "options": [
+                {
+                    "access": 2,
+                    "description": "Controls the transition time (in seconds) of on/off, brightness, color temperature (if applicable) and color (if applicable) changes. Defaults to `0` (no transition).",
+                    "name": "transition",
+                    "property": "transition",
+                    "type": "numeric",
+                    "value_min": 0
+                },
+                {
+                    "access": 2,
+                    "description": "When enabled colors will be synced, e.g. if the light supports both color x/y and color temperature a conversion from color x/y to color temperature will be done when setting the x/y color (default true).",
+                    "name": "color_sync",
+                    "property": "color_sync",
+                    "type": "binary",
+                    "value_off": false,
+                    "value_on": true
+                }
+            ],
+            "supports_ota": true,
+            "vendor": "Philips"
+        },
+        "disabled": false,
+        "endpoints": {
+            "11": {
+                "bindings": [],
+                "clusters": {
+                    "input": [
+                        "genBasic",
+                        "genIdentify",
+                        "genGroups",
+                        "genScenes",
+                        "genOnOff",
+                        "genLevelCtrl",
+                        "touchlink",
+                        "manuSpecificPhilips2",
+                        "lightingColorCtrl",
+                        "manuSpecificUbisysDimmerSetup"
+                    ],
+                    "output": [
+                        "genOta"
+                    ]
+                },
+                "configured_reportings": [],
+                "scenes": []
+            },
+            "242": {
+                "bindings": [],
+                "clusters": {
+                    "input": [
+                        "greenPower"
+                    ],
+                    "output": [
+                        "greenPower"
+                    ]
+                },
+                "configured_reportings": [],
+                "scenes": []
+            }
+        },
+        "friendly_name": "Hue Ingo",
+        "ieee_address": "0x00178801020a70e7",
+        "interview_completed": true,
+        "interviewing": false,
+        "manufacturer": "Signify Netherlands B.V.",
+        "model_id": "LCT007",
+        "network_address": 31787,
+        "power_source": "Mains (single phase)",
+        "software_build_id": "67.88.1",
+        "supported": true,
+        "type": "Router"
+    }
+]
