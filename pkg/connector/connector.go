@@ -28,16 +28,70 @@ import (
 	"sync"
 )
 
+func Start(ctx context.Context, wg *sync.WaitGroup, config configuration.Config) (connector *Connector, err error) {
+	deviceRepo, err := devicerepo.New(ctx, config)
+	if err != nil {
+		return nil, err
+	}
+	return StartWithDependencies(ctx, wg, config, MgwFactoryCast(mgw.New), ZigbeeFactoryCast(zigbee2mqtt.New), deviceRepo)
+}
+
+type ZigbeeFactory func(ctx context.Context, wg *sync.WaitGroup, config configuration.Config, connector zigbee2mqtt.Connector) (ZigbeeClient, error)
+type MgwFactory func(ctx context.Context, wg *sync.WaitGroup, config configuration.Config, refreshNotifier func()) (MgwClient, error)
+
+func StartWithDependencies(ctx context.Context, wg *sync.WaitGroup, config configuration.Config, mgwFactory MgwFactory, zigbee ZigbeeFactory, devicerepo DeviceRepo) (connector *Connector, err error) {
+	connector = &Connector{
+		config:             config,
+		eventbuffer:        make(chan EventDesc, 100),
+		commandbuffer:      make(chan CommandDesc, 100),
+		deviceupdatebuffer: make(chan []model.ZigbeeDeviceInfo, 100),
+		devicerepo:         devicerepo,
+		devicestate:        map[string]mgw.State{},
+	}
+	connector.zigbee, err = zigbee(ctx, wg, config, connector)
+	if err != nil {
+		return
+	}
+	connector.mgw, err = mgwFactory(ctx, wg, config, connector.NotifyRefresh)
+	if err != nil {
+		return
+	}
+	err = connector.mgw.ListenToCommands(connector.Command)
+	if err != nil {
+		return
+	}
+	err = connector.Start(ctx, wg)
+	return
+}
+
 type Connector struct {
 	config             configuration.Config
 	eventbuffer        chan EventDesc
 	commandbuffer      chan CommandDesc
 	deviceupdatebuffer chan []model.ZigbeeDeviceInfo
-	zigbee             *zigbee2mqtt.Client
-	mgw                *mgw.Client
+	zigbee             ZigbeeClient
+	mgw                MgwClient
 	devicerepo         DeviceRepo
 	devicestate        map[string]mgw.State
 	devicestateMux     sync.Mutex
+}
+
+type ZigbeeClient interface {
+	GetDeviceList(ctx context.Context) ([]model.ZigbeeDeviceInfo, error)
+	GetByIeee(ieeeAddress string) ([]byte, error)
+	SetByIeee(ieeeAddress string, pl []byte) error
+	GetZigbeeMessageOutputStruct(device model.ZigbeeDeviceInfo) (req map[string]interface{})
+	GetZigbeeMessageInputStruct(device model.ZigbeeDeviceInfo) (req map[string]interface{})
+}
+
+type MgwClient interface {
+	ListenToCommands(commandHandler mgw.DeviceCommandHandler) error
+	SendCommandError(commandId string, msg string)
+	Respond(deviceId string, serviceId string, command mgw.Command) error
+	SetDevice(deviceId string, deviceInfo mgw.DeviceInfo) error
+	SendClientError(msg string)
+	SendEvent(deviceId string, serviceId string, msg []byte) error
+	SendDeviceError(localDeviceId string, message string)
 }
 
 type EventDesc struct {
@@ -53,42 +107,6 @@ type CommandDesc struct {
 
 type DeviceRepo interface {
 	FindDeviceTypeId(device model.ZigbeeDeviceInfo) (string, error)
-}
-
-func Start(ctx context.Context, wg *sync.WaitGroup, config configuration.Config) (connector *Connector, err error) {
-	deviceRepo, err := devicerepo.New(ctx, config)
-	if err != nil {
-		return nil, err
-	}
-	return StartWithDependencies(ctx, wg, config, mgw.New, zigbee2mqtt.New, deviceRepo)
-}
-
-type ZigbeeProvider func(ctx context.Context, wg *sync.WaitGroup, config configuration.Config, connector zigbee2mqtt.Connector) (*zigbee2mqtt.Client, error)
-type MgwProvider func(ctx context.Context, wg *sync.WaitGroup, config configuration.Config, refreshNotifier func()) (*mgw.Client, error)
-
-func StartWithDependencies(ctx context.Context, wg *sync.WaitGroup, config configuration.Config, mgwProvider MgwProvider, zigbee ZigbeeProvider, devicerepo DeviceRepo) (connector *Connector, err error) {
-	connector = &Connector{
-		config:             config,
-		eventbuffer:        make(chan EventDesc, 100),
-		commandbuffer:      make(chan CommandDesc, 100),
-		deviceupdatebuffer: make(chan []model.ZigbeeDeviceInfo, 100),
-		devicerepo:         devicerepo,
-		devicestate:        map[string]mgw.State{},
-	}
-	connector.zigbee, err = zigbee(ctx, wg, config, connector)
-	if err != nil {
-		return
-	}
-	connector.mgw, err = mgwProvider(ctx, wg, config, connector.NotifyRefresh)
-	if err != nil {
-		return
-	}
-	err = connector.mgw.ListenToCommands(connector.Command)
-	if err != nil {
-		return
-	}
-	err = connector.Start(ctx, wg)
-	return
 }
 
 func (this *Connector) Event(device model.ZigbeeDeviceInfo, payload []byte) {
