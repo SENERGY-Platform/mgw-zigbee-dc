@@ -23,6 +23,7 @@ import (
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/devicerepo/auth"
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/devicerepo/fallback"
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/model"
+	"strings"
 	"sync"
 	"time"
 )
@@ -99,8 +100,8 @@ func (this *DeviceRepo) getMatchingDeviceType(devicetypes []model.DeviceType, de
 		for _, attr := range dt.Attributes {
 			attrMap[attr.Key] = attr.Value
 		}
-		if vendor, vendorIsSet := attrMap[AttributeZigbeeVendor]; vendorIsSet && vendor == device.Definition.Vendor {
-			if m, modelIsSet := attrMap[AttributeZigbeeModel]; modelIsSet && m == device.Definition.Model {
+		if vendor, vendorIsSet := attrMap[AttributeZigbeeVendor]; vendorIsSet && strings.TrimSpace(vendor) == strings.TrimSpace(device.Definition.Vendor) {
+			if m, modelIsSet := attrMap[AttributeZigbeeModel]; modelIsSet && strings.TrimSpace(m) == strings.TrimSpace(device.Definition.Model) {
 				return dt, true
 			}
 		}

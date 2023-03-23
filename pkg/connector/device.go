@@ -18,7 +18,10 @@ package connector
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/devicerepo"
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/mgw"
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/model"
 	"log"
@@ -54,7 +57,9 @@ func (this *Connector) handleDeviceInfoUpdate(device model.ZigbeeDeviceInfo) {
 		deviceTypeId, err := this.getDeviceTypeId(device)
 		if errors.Is(err, model.NoMatchingDeviceTypeFound) {
 			log.Println("WARNING: unable to find matching device type", err)
-			this.mgw.SendClientError(err.Error())
+			missingDtMsg := this.getMissingDeviceTypeMessage(device)
+			log.Println(missingDtMsg, "\n=============================")
+			this.mgw.SendClientError(missingDtMsg)
 			return
 		}
 		if err != nil {
@@ -63,6 +68,7 @@ func (this *Connector) handleDeviceInfoUpdate(device model.ZigbeeDeviceInfo) {
 			return
 		}
 		deviceState := this.getDeviceState(device)
+		this.storeDeviceState(device.IeeeAddress, deviceState)
 		err = this.mgw.SetDevice(deviceId, mgw.DeviceInfo{
 			Name:       deviceName,
 			State:      deviceState,
@@ -74,6 +80,24 @@ func (this *Connector) handleDeviceInfoUpdate(device model.ZigbeeDeviceInfo) {
 			return
 		}
 	}
+}
+
+func (this *Connector) storeDeviceState(ieeeAddr string, state mgw.State) {
+	this.devicestateMux.Lock()
+	defer this.devicestateMux.Unlock()
+	this.devicestate[ieeeAddr] = state
+}
+
+func (this *Connector) getStoredDeviceState(ieeeAddr string) (state mgw.State, ok bool) {
+	this.devicestateMux.Lock()
+	defer this.devicestateMux.Unlock()
+	state, ok = this.devicestate[ieeeAddr]
+	return
+}
+
+func (this *Connector) deviceIsOnline(ieeeAddress string) bool {
+	state, _ := this.getStoredDeviceState(ieeeAddress)
+	return state == mgw.Online
 }
 
 func (this *Connector) getDeviceId(device model.ZigbeeDeviceInfo) string {
@@ -101,4 +125,38 @@ func (this *Connector) getDeviceState(device model.ZigbeeDeviceInfo) mgw.State {
 
 func (this *Connector) getDeviceTypeId(device model.ZigbeeDeviceInfo) (string, error) {
 	return this.devicerepo.FindDeviceTypeId(device)
+}
+
+func (this *Connector) getMissingDeviceTypeMessage(device model.ZigbeeDeviceInfo) string {
+	return GetMissingDeviceTypeMessage(device, this.zigbee.GetZigbeeMessageOutputStruct, this.zigbee.GetZigbeeMessageInputStruct)
+}
+
+func GetMissingDeviceTypeMessage(device model.ZigbeeDeviceInfo, outputProvider func(device model.ZigbeeDeviceInfo) map[string]interface{}, inputProvider func(device model.ZigbeeDeviceInfo) map[string]interface{}) string {
+	output, _ := json.MarshalIndent(outputProvider(device), "", "    ")
+	input, _ := json.MarshalIndent(inputProvider(device), "", "    ")
+	return fmt.Sprintf(`missing zigbee device-type, please provide a device-type with:
+ref: https://www.zigbee2mqtt.io/devices/%v.html
+attributes:
+    - %v = true
+    - %v = %v
+    - %v = %v
+services:
+---------------
+local-id: get
+protocol: standard-connector
+example output data:
+%v
+---------------
+local-id: set
+protocol: standard-connector
+example input data:
+%v
+---------------
+`, device.Definition.Model,
+		devicerepo.AttributeUsedForZigbee,
+		devicerepo.AttributeZigbeeVendor, device.Definition.Vendor,
+		devicerepo.AttributeZigbeeModel, device.Definition.Model,
+		string(output),
+		string(input),
+	)
 }

@@ -41,10 +41,16 @@ func (this *Connector) startEventHandling(ctx context.Context, wg *sync.WaitGrou
 }
 
 func (this *Connector) handleEvent(event EventDesc) {
-	deviceid := this.getDeviceId(event.Device)
-	err := this.mgw.SendEvent(deviceid, "get", event.Payload)
-	if err != nil {
-		log.Println("ERROR: unable to send event to mgw", err)
-		this.mgw.SendDeviceError(deviceid, "unable to send event to mgw: "+err.Error())
+	if this.eventIsAllowed(event) {
+		deviceid := this.getDeviceId(event.Device)
+		err := this.mgw.SendEvent(deviceid, "get", event.Payload)
+		if err != nil {
+			log.Println("ERROR: unable to send event to mgw", err)
+			this.mgw.SendDeviceError(deviceid, "unable to send event to mgw: "+err.Error())
+		}
 	}
+}
+
+func (this *Connector) eventIsAllowed(event EventDesc) bool {
+	return !event.Device.Disabled && event.Device.Supported && event.Device.InterviewCompleted && this.deviceIsOnline(event.Device.IeeeAddress)
 }

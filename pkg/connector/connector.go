@@ -36,6 +36,8 @@ type Connector struct {
 	zigbee             *zigbee2mqtt.Client
 	mgw                *mgw.Client
 	devicerepo         DeviceRepo
+	devicestate        map[string]mgw.State
+	devicestateMux     sync.Mutex
 }
 
 type EventDesc struct {
@@ -64,19 +66,20 @@ func Start(ctx context.Context, wg *sync.WaitGroup, config configuration.Config)
 type ZigbeeProvider func(ctx context.Context, wg *sync.WaitGroup, config configuration.Config, connector zigbee2mqtt.Connector) (*zigbee2mqtt.Client, error)
 type MgwProvider func(ctx context.Context, wg *sync.WaitGroup, config configuration.Config, refreshNotifier func()) (*mgw.Client, error)
 
-func StartWithDependencies(ctx context.Context, wg *sync.WaitGroup, config configuration.Config, mgw MgwProvider, zigbee ZigbeeProvider, devicerepo DeviceRepo) (connector *Connector, err error) {
+func StartWithDependencies(ctx context.Context, wg *sync.WaitGroup, config configuration.Config, mgwProvider MgwProvider, zigbee ZigbeeProvider, devicerepo DeviceRepo) (connector *Connector, err error) {
 	connector = &Connector{
 		config:             config,
 		eventbuffer:        make(chan EventDesc, 100),
 		commandbuffer:      make(chan CommandDesc, 100),
 		deviceupdatebuffer: make(chan []model.ZigbeeDeviceInfo, 100),
 		devicerepo:         devicerepo,
+		devicestate:        map[string]mgw.State{},
 	}
 	connector.zigbee, err = zigbee(ctx, wg, config, connector)
 	if err != nil {
 		return
 	}
-	connector.mgw, err = mgw(ctx, wg, config, connector.NotifyRefresh)
+	connector.mgw, err = mgwProvider(ctx, wg, config, connector.NotifyRefresh)
 	if err != nil {
 		return
 	}

@@ -96,13 +96,3 @@ func getZigbeeGetMessage(device model.ZigbeeDeviceInfo) (req map[string]interfac
 	}
 	return
 }
-
-type ZigbeeAccess int
-
-const ZigbeeGetAccess ZigbeeAccess = 0b100
-const ZigbeeSetAccess ZigbeeAccess = 0b010
-const ZigbeePublishAccess ZigbeeAccess = 0b001
-
-func checkZigbeeAccess(access int, checkFor ZigbeeAccess) bool {
-	return access&int(checkFor) != 0
-}

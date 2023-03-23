@@ -48,6 +48,7 @@ type ZigbeeDeviceInfoFeature struct {
 	Access      int                             `json:"access,omitempty"`
 	Description string                          `json:"description,omitempty"`
 	Features    []ZigbeeDeviceInfoFeature       `json:"features,omitempty"`
+	ItemType    []ZigbeeDeviceInfoFeature       `json:"item_type,omitempty"`
 	Unit        string                          `json:"unit,omitempty"`
 	Values      []interface{}                   `json:"values,omitempty"`
 	ValueMax    int64                           `json:"value_max,omitempty"`
