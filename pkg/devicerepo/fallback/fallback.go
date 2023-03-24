@@ -19,6 +19,7 @@ package fallback
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"os"
 	"sync"
 )
@@ -72,11 +73,13 @@ func (this *FallbackImpl) Set(key string, value interface{}) (err error) {
 func (this *FallbackImpl) loadState() (err error) {
 	this.mux.Lock()
 	defer this.mux.Unlock()
+	log.Println("load fallback file", this.file)
 	exists, err := fileExists(this.file)
 	if err != nil {
 		return err
 	}
 	if !exists {
+		log.Println("fall back file does not exist --> a new one will be created at", this.file)
 		this.memory = map[string]interface{}{}
 		return
 	}

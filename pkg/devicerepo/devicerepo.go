@@ -17,10 +17,8 @@
 package devicerepo
 
 import (
-	"context"
 	"fmt"
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/configuration"
-	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/devicerepo/auth"
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/devicerepo/fallback"
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/model"
 	"strings"
@@ -30,7 +28,7 @@ import (
 
 type DeviceRepo struct {
 	config                    configuration.Config
-	auth                      *auth.Auth
+	auth                      Auth
 	fallback                  fallback.Fallback
 	deviceTypes               []model.DeviceType
 	minCacheDuration          time.Duration
@@ -40,7 +38,11 @@ type DeviceRepo struct {
 	dtMux                     sync.Mutex
 }
 
-func New(ctx context.Context, config configuration.Config) (*DeviceRepo, error) {
+type Auth interface {
+	EnsureAccess(config configuration.Config) (token string, err error)
+}
+
+func New(config configuration.Config, auth Auth) (*DeviceRepo, error) {
 	minCacheDuration, err := time.ParseDuration(config.MinCacheDuration)
 	if err != nil {
 		return nil, err
@@ -54,6 +56,7 @@ func New(ctx context.Context, config configuration.Config) (*DeviceRepo, error) 
 		return nil, err
 	}
 	return &DeviceRepo{
+		auth:             auth,
 		config:           config,
 		fallback:         f,
 		minCacheDuration: minCacheDuration,
@@ -62,9 +65,6 @@ func New(ctx context.Context, config configuration.Config) (*DeviceRepo, error) 
 }
 
 func (this *DeviceRepo) getToken() (string, error) {
-	if this.auth == nil {
-		this.auth = &auth.Auth{}
-	}
 	return this.auth.EnsureAccess(this.config)
 }
 

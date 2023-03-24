@@ -17,7 +17,9 @@
 package devicerepo
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/model"
 	"log"
 	"time"
@@ -94,18 +96,31 @@ func (this *DeviceRepo) getDeviceTypeListFromPermissionSearch() (result []model.
 
 func (this *DeviceRepo) getDeviceTypeListFromFallback() (result []model.DeviceType, err error) {
 	value, fallbackerr := this.fallback.Get(DtFallbackKey)
-	if err != nil {
+	if fallbackerr != nil {
 		log.Println("ERROR: unable to load fallback", fallbackerr)
 		return result, errors.Join(err, fallbackerr)
 	}
 	var ok bool
 	result, ok = value.([]model.DeviceType)
 	if !ok {
-		err = errors.New("fallback file does not contain expected device-type format")
-		log.Println("ERROR:", err)
-		return result, err
+		err = jsonCast(value, &result)
+		if err != nil {
+			err = fmt.Errorf("fallback file does not contain expected format: %w", err)
+			log.Println("ERROR:", err)
+			return result, err
+		}
+		this.fallback.Set(DtFallbackKey, result)
 	}
 	return result, nil
+}
+
+func jsonCast(in interface{}, out interface{}) error {
+	temp, err := json.Marshal(in)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(temp, out)
+	return err
 }
 
 func (this *DeviceRepo) getDeviceTypeList() []model.DeviceType {

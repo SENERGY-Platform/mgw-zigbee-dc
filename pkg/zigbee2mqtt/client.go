@@ -38,7 +38,7 @@ type Client struct {
 
 type Connector interface {
 	Event(device model.ZigbeeDeviceInfo, payload []byte)
-	DeviceUpdate(devices []model.ZigbeeDeviceInfo)
+	DeviceInfoUpdate(devices []model.ZigbeeDeviceInfo)
 }
 
 func New(ctx context.Context, wg *sync.WaitGroup, config configuration.Config, connector Connector) (*Client, error) {

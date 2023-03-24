@@ -20,6 +20,7 @@ import (
 	"context"
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/configuration"
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/devicerepo"
+	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/devicerepo/auth"
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/mgw"
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/model"
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/zigbee2mqtt"
@@ -29,7 +30,7 @@ import (
 )
 
 func Start(ctx context.Context, wg *sync.WaitGroup, config configuration.Config) (connector *Connector, err error) {
-	deviceRepo, err := devicerepo.New(ctx, config)
+	deviceRepo, err := devicerepo.New(config, &auth.Auth{})
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +117,7 @@ func (this *Connector) Event(device model.ZigbeeDeviceInfo, payload []byte) {
 	}
 }
 
-func (this *Connector) DeviceUpdate(devices []model.ZigbeeDeviceInfo) {
+func (this *Connector) DeviceInfoUpdate(devices []model.ZigbeeDeviceInfo) {
 	this.deviceupdatebuffer <- devices
 }
 
@@ -127,7 +128,7 @@ func (this *Connector) NotifyRefresh() {
 		debug.PrintStack()
 		return
 	}
-	this.DeviceUpdate(devices)
+	this.DeviceInfoUpdate(devices)
 }
 
 func (this *Connector) Command(deviceId string, serviceId string, command mgw.Command) {

@@ -64,7 +64,8 @@ func (this *DeviceRegister) waitForInit(ctx context.Context) error {
 	return err
 }
 
-func (this *DeviceRegister) Set(devices []model.ZigbeeDeviceInfo) {
+// Set returns true if this is the first Set() call
+func (this *DeviceRegister) Set(devices []model.ZigbeeDeviceInfo) (firstCall bool) {
 	this.mux.Lock()
 	defer this.mux.Unlock()
 	this.list = devices
@@ -75,8 +76,11 @@ func (this *DeviceRegister) Set(devices []model.ZigbeeDeviceInfo) {
 		this.byFriendlyName[e.FriendlyName] = e
 	}
 	if !this.init {
+		this.init = true
 		this.initWg.Done()
+		return true
 	}
+	return false
 }
 
 // GetByIeee returns a model.ZigbeeDeviceInfo by its IeeeAddress

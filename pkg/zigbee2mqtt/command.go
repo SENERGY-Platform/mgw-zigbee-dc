@@ -25,7 +25,7 @@ func (this *Client) SetByIeee(ieeeAddress string, pl []byte) error {
 	if err != nil {
 		return err
 	}
-	return this.send(this.config.ZigbeeMqttTopicPrefix+device.FriendlyName, byte(this.config.ZigbeeQos), false, pl)
+	return this.send(this.config.ZigbeeMqttTopicPrefix+device.FriendlyName+"/set", byte(this.config.ZigbeeQos), false, pl)
 }
 
 func (this *Client) SetByFriendlyName(name string, pl []byte) error {
@@ -33,7 +33,7 @@ func (this *Client) SetByFriendlyName(name string, pl []byte) error {
 	if err != nil {
 		return err
 	}
-	return this.send(this.config.ZigbeeMqttTopicPrefix+device.FriendlyName, byte(this.config.ZigbeeQos), false, pl)
+	return this.send(this.config.ZigbeeMqttTopicPrefix+device.FriendlyName+"/set", byte(this.config.ZigbeeQos), false, pl)
 }
 
 func (this *Client) GetByIeee(ieeeAddress string) ([]byte, error) {

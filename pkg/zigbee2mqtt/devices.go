@@ -22,6 +22,7 @@ import (
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/model"
 	paho "github.com/eclipse/paho.mqtt.golang"
 	"log"
+	"time"
 )
 
 func (this *Client) startDeviceInfoListener() error {
@@ -41,15 +42,21 @@ func (this *Client) deviceInfoHandler(client paho.Client, message paho.Message) 
 		log.Println("ERROR: unable to handle device info message", err)
 		return
 	}
-	this.register.Set(devices)
-	if len(this.values) == 0 {
-		err = this.RefreshEventValues()
-		if err != nil {
-			log.Println("ERROR: unable to refresh event values", err)
-			return
-		}
+
+	doInitialEventRefresh := this.register.Set(devices)
+
+	this.connector.DeviceInfoUpdate(devices)
+
+	if doInitialEventRefresh {
+		go func() {
+			time.Sleep(200 * time.Millisecond) //ensure resulting events can be handled because device info is processed
+			err = this.RefreshEventValues()
+			if err != nil {
+				log.Println("ERROR: unable to refresh event values", err)
+				return
+			}
+		}()
 	}
-	this.connector.DeviceUpdate(devices)
 }
 
 // GetDeviceList returns a list of model.ZigbeeDeviceInfo
