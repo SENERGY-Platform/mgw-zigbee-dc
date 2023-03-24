@@ -4,12 +4,12 @@
     "device_id_prefix": "zigbee:",
 
     "mgw_mqtt_broker":"tcp://message-broker:1883",
-    "mgw_mqtt_client_id":"mgw-zwave-dc_mgw",
+    "mgw_mqtt_client_id":"mgw-zigbee-dc_mgw",
     "mgw_mqtt_user":"",
     "mgw_mqtt_pw":"",
 
     "zigbee_mqtt_broker":"tcp://message-broker:1883",
-    "zigbee_mqtt_client_id":"mgw-zigbee-dc_zwave",
+    "zigbee_mqtt_client_id":"mgw-zigbee-dc_zigbee",
     "zigbee_mqtt_user":"",
     "zigbee_mqtt_pw":"",
 
