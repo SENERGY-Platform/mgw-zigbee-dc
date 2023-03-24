@@ -35,7 +35,3 @@ jobs:
           tags: |
             smartenergyplatform/mgw-zigbee-dc:dev
             ghcr.io/senergy-platform/mgw-zigbee-dc:dev
-      - name: Deploy
-        uses: wei/curl@v1
-        with:
-          args: -X POST -u ${{ secrets.RANCHER_TOKEN }} ${{ secrets.RANCHER_URL }}${{ secrets.RANCHER_SERVICE }}?action=redeploy
