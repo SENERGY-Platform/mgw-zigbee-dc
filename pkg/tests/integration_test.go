@@ -60,6 +60,8 @@ func testIntegrationWithWorkingPermSearch(t *testing.T, fallbackFile string) {
 		return
 	}
 
+	config.CreateMissingDeviceTypes = false
+
 	config.MinCacheDuration = "200ms"
 	config.MaxCacheDuration = "1s"
 	config.FallbackFile = fallbackFile
@@ -506,6 +508,8 @@ func testIntegrationWithFallbackUse(t *testing.T, fallbackFile string) {
 	config.MinCacheDuration = "200ms"
 	config.MaxCacheDuration = "1s"
 	config.FallbackFile = fallbackFile
+
+	config.CreateMissingDeviceTypes = false
 
 	mqttPort, _, err := docker.Mqtt(ctx, wg)
 	if err != nil {

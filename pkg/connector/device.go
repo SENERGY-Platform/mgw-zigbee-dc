@@ -24,8 +24,11 @@ import (
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/devicerepo"
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/mgw"
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/model"
+	"github.com/SENERGY-Platform/models/go/models"
 	"log"
+	"reflect"
 	"runtime/debug"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -54,15 +57,28 @@ func (this *Connector) handleDeviceInfoUpdate(device model.ZigbeeDeviceInfo) {
 	if device.Supported && device.InterviewCompleted {
 		deviceId := this.getDeviceId(device)
 		deviceName := this.getDeviceName(device)
-		deviceTypeId, err := this.getDeviceTypeId(device)
+		deviceTypeId, usedFallback, err := this.getDeviceTypeId(device)
 		if errors.Is(err, model.NoMatchingDeviceTypeFound) {
 			log.Println("WARNING: unable to find matching device type", err)
-			missingDtMsg := this.getMissingDeviceTypeMessage(device)
-			log.Println(missingDtMsg, "\n=============================")
-			this.mgw.SendClientError(missingDtMsg)
-			return
-		}
-		if err != nil {
+			if !usedFallback {
+				if this.config.CreateMissingDeviceTypes {
+					log.Println("create device type", err)
+					deviceTypeId, err = this.createDeviceType(device)
+					if err != nil {
+						log.Println("WARNING: unable to create device type", err)
+						return
+					}
+					//time.Sleep(1 * time.Second) //ensure device type has time to be accessible before continuing
+					//if no error: continue with mgw device state publish
+				} else {
+					missingDtMsg := this.getMissingDeviceTypeMessage(device)
+					log.Println(missingDtMsg, "\n=============================")
+					this.mgw.SendClientError(missingDtMsg)
+					return
+				}
+			}
+
+		} else if err != nil {
 			log.Println("ERROR:", err)
 			debug.PrintStack()
 			return
@@ -123,7 +139,7 @@ func (this *Connector) getDeviceState(device model.ZigbeeDeviceInfo) mgw.State {
 	}
 }
 
-func (this *Connector) getDeviceTypeId(device model.ZigbeeDeviceInfo) (string, error) {
+func (this *Connector) getDeviceTypeId(device model.ZigbeeDeviceInfo) (dtId string, usedFallback bool, err error) {
 	return this.devicerepo.FindDeviceTypeId(device)
 }
 
@@ -159,4 +175,86 @@ example input data:
 		string(output),
 		string(input),
 	)
+}
+
+func (this *Connector) createDeviceType(device model.ZigbeeDeviceInfo) (string, error) {
+	dt, _, err := this.devicerepo.CreateDeviceType(this.zigbeeDeviceToDeviceType(device))
+	return dt.Id, err
+}
+
+func (this *Connector) zigbeeDeviceToDeviceType(device model.ZigbeeDeviceInfo) (dt models.DeviceType) {
+	output := this.zigbee.GetZigbeeMessageOutputStruct(device)
+	input := this.zigbee.GetZigbeeMessageInputStruct(device)
+	vendor := device.Definition.Vendor
+	m := device.Definition.Model
+	return models.DeviceType{
+		Name:          vendor + " " + m,
+		DeviceClassId: this.config.CreateMissingDeviceTypesWithDeviceClass,
+		Attributes: []models.Attribute{
+			{Key: devicerepo.AttributeUsedForZigbee, Value: "true"},
+			{Key: devicerepo.AttributeZigbeeVendor, Value: vendor},
+			{Key: devicerepo.AttributeZigbeeModel, Value: m},
+		},
+		Services: []models.Service{
+			{
+				LocalId:     "set",
+				Name:        "set",
+				Interaction: models.REQUEST,
+				ProtocolId:  this.config.CreateMissingDeviceTypesWithProtocol,
+				Inputs: []models.Content{
+					{
+						ContentVariable:   valueToContentVariable("value", input),
+						Serialization:     models.JSON,
+						ProtocolSegmentId: this.config.CreateMissingDeviceTypesWithProtocolSegment,
+					},
+				},
+			},
+			{
+				LocalId:     "get",
+				Name:        "get",
+				Interaction: models.EVENT_AND_REQUEST,
+				ProtocolId:  this.config.CreateMissingDeviceTypesWithProtocol,
+				Outputs: []models.Content{
+					{
+						ContentVariable:   valueToContentVariable("value", output),
+						Serialization:     models.JSON,
+						ProtocolSegmentId: this.config.CreateMissingDeviceTypesWithProtocolSegment,
+					},
+				},
+			},
+		},
+	}
+}
+
+func valueToContentVariable(name string, data interface{}) (result models.ContentVariable) {
+	result = models.ContentVariable{
+		Name:                name,
+		IsVoid:              false,
+		SubContentVariables: nil,
+	}
+	switch v := data.(type) {
+	case string:
+		result.Type = models.String
+	case float64, float32, int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
+		result.Type = models.Float
+	case bool:
+		result.Type = models.Boolean
+	case []interface{}:
+		result.Type = models.List
+		sub := []models.ContentVariable{}
+		for i, e := range v {
+			sub = append(sub, valueToContentVariable(strconv.Itoa(i), e))
+		}
+		result.SubContentVariables = sub
+	case map[string]interface{}:
+		result.Type = models.Structure
+		sub := []models.ContentVariable{}
+		for k, e := range v {
+			sub = append(sub, valueToContentVariable(k, e))
+		}
+		result.SubContentVariables = sub
+	default:
+		result.Type = models.Type(reflect.TypeOf(v).String())
+	}
+	return result
 }

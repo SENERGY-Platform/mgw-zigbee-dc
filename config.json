@@ -26,6 +26,13 @@
     "auth_password": "",
     "fallback_file": "devicerepo_fallback.json",
     "permissions_search_url": "https://api.senergy.infai.org/permissions/query",
+    "device_manager_url": "https://api.senergy.infai.org/device-manager",
     "min_cache_duration": "1m",
-    "max_cache_duration": "1h"
+    "max_cache_duration": "1h",
+
+    "create_missing_device_types": true,
+    "create_missing_device_types_with_device_class": "urn:infai:ses:device-class:ff64280a-58e6-4cf9-9a44-e70d3831a79d",
+    "create_missing_device_types_with_protocol": "urn:infai:ses:protocol:f3a63aeb-187e-4dd9-9ef5-d97a6eb6292b",
+    "create_missing_device_types_with_protocol_segment": "urn:infai:ses:protocol-segment:0d211842-cef8-41ec-ab6b-9dbc31bc3a65",
+    "disown_created_device_types": false
 }

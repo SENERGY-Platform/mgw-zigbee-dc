@@ -56,10 +56,17 @@ type Config struct {
 	AuthUsername             string  `json:"auth_username"`
 	AuthPassword             string  `json:"auth_password"`
 
+	DeviceManagerUrl     string `json:"device_manager_url"`
 	PermissionsSearchUrl string `json:"permissions_search_url"`
 	FallbackFile         string `json:"fallback_file"`
 	MinCacheDuration     string `json:"min_cache_duration"`
 	MaxCacheDuration     string `json:"max_cache_duration"`
+
+	CreateMissingDeviceTypes                    bool   `json:"create_missing_device_types"`
+	CreateMissingDeviceTypesWithDeviceClass     string `json:"create_missing_device_types_with_device_class"`
+	CreateMissingDeviceTypesWithProtocol        string `json:"create_missing_device_types_with_protocol"`
+	CreateMissingDeviceTypesWithProtocolSegment string `json:"create_missing_device_types_with_protocol_segment"`
+	DisownCreatedDeviceTypes                    bool   `json:"disown_created_device_types"`
 }
 
 // loads config from json in location and used environment variables (e.g ZookeeperUrl --> ZOOKEEPER_URL)

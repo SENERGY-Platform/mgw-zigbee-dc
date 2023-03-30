@@ -24,6 +24,7 @@ import (
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/mgw"
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/model"
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/zigbee2mqtt"
+	"github.com/SENERGY-Platform/models/go/models"
 	"log"
 	"runtime/debug"
 	"sync"
@@ -107,7 +108,8 @@ type CommandDesc struct {
 }
 
 type DeviceRepo interface {
-	FindDeviceTypeId(device model.ZigbeeDeviceInfo) (string, error)
+	FindDeviceTypeId(device model.ZigbeeDeviceInfo) (dtId string, usedFallback bool, err error)
+	CreateDeviceType(dt models.DeviceType) (result models.DeviceType, code int, err error)
 }
 
 func (this *Connector) Event(device model.ZigbeeDeviceInfo, payload []byte) {

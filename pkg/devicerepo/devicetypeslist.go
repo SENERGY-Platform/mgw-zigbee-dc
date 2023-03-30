@@ -39,6 +39,12 @@ func (this *DeviceRepo) ListZigbeeDeviceTypes() (list []model.DeviceType, err er
 	return this.getDeviceTypeList(), nil
 }
 
+func (this *DeviceRepo) getLastDtRefreshUsedFallback() bool {
+	this.dtMux.Lock()
+	defer this.dtMux.Unlock()
+	return this.lastDtRefreshUsedFallback
+}
+
 func (this *DeviceRepo) refreshDeviceTypeList() error {
 	this.dtMux.Lock()
 	defer this.dtMux.Unlock()

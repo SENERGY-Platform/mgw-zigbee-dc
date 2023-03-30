@@ -51,8 +51,8 @@ type ZigbeeDeviceInfoFeature struct {
 	ItemType    []ZigbeeDeviceInfoFeature       `json:"item_type,omitempty"`
 	Unit        string                          `json:"unit,omitempty"`
 	Values      []interface{}                   `json:"values,omitempty"`
-	ValueMax    int64                           `json:"value_max,omitempty"`
-	ValueMin    int64                           `json:"value_min,omitempty"`
+	ValueMax    float64                         `json:"value_max,omitempty"`
+	ValueMin    float64                         `json:"value_min,omitempty"`
 	ValueOff    interface{}                     `json:"value_off,omitempty"`
 	ValueOn     interface{}                     `json:"value_on,omitempty"`
 	ValueToggle interface{}                     `json:"value_toggle,omitempty"`

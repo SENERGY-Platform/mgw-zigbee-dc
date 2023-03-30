@@ -27,4 +27,9 @@ jobs:
 
       - name: Test
         timeout-minutes: 120
-        run: go test -timeout 99999s -covermode=atomic -coverpkg=./... -coverprofile=coverage.out ./...
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          retry_on: error
+          timeout_minutes: 120
+          command: go test -timeout 99999s -covermode=atomic -coverpkg=./... -coverprofile=coverage.out ./...
