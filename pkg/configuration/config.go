@@ -53,7 +53,7 @@ type Config struct {
 	AuthEndpoint             string  `json:"auth_endpoint"`
 	AuthClientId             string  `json:"auth_client_id"`
 	AuthExpirationTimeBuffer float64 `json:"auth_expiration_time_buffer"`
-	AuthUserName             string  `json:"auth_user_name"`
+	AuthUsername             string  `json:"auth_username"`
 	AuthPassword             string  `json:"auth_password"`
 
 	PermissionsSearchUrl string `json:"permissions_search_url"`

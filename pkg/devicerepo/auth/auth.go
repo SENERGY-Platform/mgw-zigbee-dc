@@ -70,7 +70,7 @@ func getOpenidToken(token *Auth, config configuration.Config) (err error) {
 	var values url.Values
 	values = url.Values{
 		"client_id":  {config.AuthClientId},
-		"username":   {config.AuthUserName},
+		"username":   {config.AuthUsername},
 		"password":   {config.AuthPassword},
 		"grant_type": {"password"},
 	}
