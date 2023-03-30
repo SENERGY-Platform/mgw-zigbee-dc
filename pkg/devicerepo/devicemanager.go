@@ -65,6 +65,9 @@ func (this *DeviceRepo) CreateDeviceType(dt models.DeviceType) (result models.De
 	//don't create this device type again
 	this.createdDt[key] = result
 
+	//ensure device type has time to be accessible before continuing
+	time.Sleep(1 * time.Second)
+
 	return result, code, err
 }
 

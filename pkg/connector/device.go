@@ -68,7 +68,6 @@ func (this *Connector) handleDeviceInfoUpdate(device model.ZigbeeDeviceInfo) {
 						log.Println("WARNING: unable to create device type", err)
 						return
 					}
-					//time.Sleep(1 * time.Second) //ensure device type has time to be accessible before continuing
 					//if no error: continue with mgw device state publish
 				} else {
 					missingDtMsg := this.getMissingDeviceTypeMessage(device)
