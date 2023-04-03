@@ -186,7 +186,7 @@ func (this *Connector) zigbeeDeviceToDeviceType(device model.ZigbeeDeviceInfo) (
 	input := this.zigbee.GetZigbeeMessageInputStruct(device)
 	vendor := device.Definition.Vendor
 	m := device.Definition.Model
-	return models.DeviceType{
+	dt = models.DeviceType{
 		Name:          vendor + " " + m,
 		DeviceClassId: this.config.CreateMissingDeviceTypesWithDeviceClass,
 		Attributes: []models.Attribute{
@@ -194,35 +194,38 @@ func (this *Connector) zigbeeDeviceToDeviceType(device model.ZigbeeDeviceInfo) (
 			{Key: devicerepo.AttributeZigbeeVendor, Value: vendor},
 			{Key: devicerepo.AttributeZigbeeModel, Value: m},
 		},
-		Services: []models.Service{
-			{
-				LocalId:     "set",
-				Name:        "set",
-				Interaction: models.REQUEST,
-				ProtocolId:  this.config.CreateMissingDeviceTypesWithProtocol,
-				Inputs: []models.Content{
-					{
-						ContentVariable:   valueToContentVariable("value", input),
-						Serialization:     models.JSON,
-						ProtocolSegmentId: this.config.CreateMissingDeviceTypesWithProtocolSegment,
-					},
-				},
-			},
-			{
-				LocalId:     "get",
-				Name:        "get",
-				Interaction: models.EVENT_AND_REQUEST,
-				ProtocolId:  this.config.CreateMissingDeviceTypesWithProtocol,
-				Outputs: []models.Content{
-					{
-						ContentVariable:   valueToContentVariable("value", output),
-						Serialization:     models.JSON,
-						ProtocolSegmentId: this.config.CreateMissingDeviceTypesWithProtocolSegment,
-					},
-				},
-			},
-		},
 	}
+	if len(input) > 0 {
+		dt.Services = append(dt.Services, models.Service{
+			LocalId:     "set",
+			Name:        "set",
+			Interaction: models.REQUEST,
+			ProtocolId:  this.config.CreateMissingDeviceTypesWithProtocol,
+			Inputs: []models.Content{
+				{
+					ContentVariable:   valueToContentVariable("value", input),
+					Serialization:     models.JSON,
+					ProtocolSegmentId: this.config.CreateMissingDeviceTypesWithProtocolSegment,
+				},
+			},
+		})
+	}
+	if len(output) > 0 {
+		dt.Services = append(dt.Services, models.Service{
+			LocalId:     "get",
+			Name:        "get",
+			Interaction: models.EVENT_AND_REQUEST,
+			ProtocolId:  this.config.CreateMissingDeviceTypesWithProtocol,
+			Outputs: []models.Content{
+				{
+					ContentVariable:   valueToContentVariable("value", output),
+					Serialization:     models.JSON,
+					ProtocolSegmentId: this.config.CreateMissingDeviceTypesWithProtocolSegment,
+				},
+			},
+		})
+	}
+	return dt
 }
 
 func valueToContentVariable(name string, data interface{}) (result models.ContentVariable) {
