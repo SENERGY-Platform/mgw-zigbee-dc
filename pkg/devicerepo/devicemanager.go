@@ -24,10 +24,12 @@ import (
 	"github.com/SENERGY-Platform/models/go/models"
 	"io"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
 )
 
-func (this *DeviceRepo) CreateDeviceType(dt models.DeviceType) (result models.DeviceType, code int, err error) {
+func (this *DeviceRepo) CreateDeviceTypeWithDistinctAttributes(dt models.DeviceType, attributeKeys []string) (result models.DeviceType, code int, err error) {
 	this.dtMux.Lock()
 	defer this.dtMux.Unlock()
 
@@ -44,7 +46,7 @@ func (this *DeviceRepo) CreateDeviceType(dt models.DeviceType) (result models.De
 	if err != nil {
 		return result, 500, err
 	}
-	req, err := http.NewRequest(http.MethodPost, this.config.DeviceManagerUrl+"/device-types", buf)
+	req, err := http.NewRequest(http.MethodPost, this.config.DeviceManagerUrl+"/device-types?distinct_attributes="+url.QueryEscape(strings.Join(attributeKeys, ",")), buf)
 	if err != nil {
 		return result, 500, err
 	}

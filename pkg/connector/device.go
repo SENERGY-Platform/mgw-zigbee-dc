@@ -177,7 +177,13 @@ example input data:
 }
 
 func (this *Connector) createDeviceType(device model.ZigbeeDeviceInfo) (string, error) {
-	dt, _, err := this.devicerepo.CreateDeviceType(this.zigbeeDeviceToDeviceType(device))
+	dt, _, err := this.devicerepo.CreateDeviceTypeWithDistinctAttributes(
+		this.zigbeeDeviceToDeviceType(device),
+		[]string{
+			devicerepo.AttributeUsedForZigbee,
+			devicerepo.AttributeZigbeeVendor,
+			devicerepo.AttributeZigbeeModel,
+		})
 	return dt.Id, err
 }
 
@@ -233,6 +239,7 @@ func valueToContentVariable(name string, data interface{}) (result models.Conten
 		Name:                name,
 		IsVoid:              false,
 		SubContentVariables: nil,
+		OmitEmpty:           true,
 	}
 	switch v := data.(type) {
 	case string:

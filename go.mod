@@ -3,9 +3,11 @@ module github.com/SENERGY-Platform/mgw-zigbee-dc
 go 1.20
 
 require (
-	github.com/SENERGY-Platform/models/go v0.0.0-20230306084304-4d1a01900e98
+	github.com/SENERGY-Platform/models/go v0.0.0-20230404065955-02043f7b5593
 	github.com/eclipse/paho.mqtt.golang v1.4.2
 	github.com/ory/dockertest/v3 v3.9.1
+	github.com/segmentio/kafka-go v0.4.39
+	github.com/wvanbergen/kazoo-go v0.0.0-20180202103751-f72d8611297a
 )
 
 require (
@@ -20,6 +22,7 @@ require (
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
+	github.com/google/uuid v1.3.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/klauspost/compress v1.15.9 // indirect
@@ -32,9 +35,7 @@ require (
 	github.com/pierrec/lz4/v4 v4.1.15 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/samuel/go-zookeeper v0.0.0-20201211165307-7117e9ea2414 // indirect
-	github.com/segmentio/kafka-go v0.4.39 // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
-	github.com/wvanbergen/kazoo-go v0.0.0-20180202103751-f72d8611297a // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
