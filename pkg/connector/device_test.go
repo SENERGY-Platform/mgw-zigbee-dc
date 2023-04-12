@@ -251,7 +251,7 @@ func TestDeviceTypeCreation(t *testing.T) {
 		}
 		prepareForTestCompare(&dt, t)
 		expected := models.DeviceType{
-			Name:        "Philips 9290012573A",
+			Name:        "UNFINISHED zigbee2mqtt Philips 9290012573A",
 			Description: "",
 			Services: []models.Service{
 				{
