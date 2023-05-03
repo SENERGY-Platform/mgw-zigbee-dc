@@ -18,30 +18,29 @@ package docker
 
 import (
 	"context"
-	"github.com/ory/dockertest/v3"
-	"github.com/ory/dockertest/v3/docker"
+	"github.com/SENERGY-Platform/permission-search/lib/tests/docker"
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/wait"
 	"log"
-	"net/http"
 	"sync"
 )
 
-func DeviceManager(ctx context.Context, wg *sync.WaitGroup, kafkaUrl string, devicerepo string, permsearch string) (hostPort string, ipAddress string, err error) {
+func DeviceManager(ctx context.Context, wg *sync.WaitGroup, kafkaUrl string, deviceRepoUrl string, permsearch string) (hostPort string, ipAddress string, err error) {
 	log.Println("start device-manager")
-	pool, err := dockertest.NewPool("")
-	if err != nil {
-		return "", "", err
-	}
-	container, err := pool.RunWithOptions(&dockertest.RunOptions{
-		Repository: "ghcr.io/senergy-platform/device-manager",
-		Tag:        "dev",
-		Env: []string{
-			"KAFKA_URL=" + kafkaUrl,
-			"DEVICE_REPO_URL=" + devicerepo,
-			"PERMISSIONS_URL=" + permsearch,
-			"DISABLE_VALIDATION=true",
+	c, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: testcontainers.ContainerRequest{
+			Image: "ghcr.io/senergy-platform/device-manager:dev",
+			Env: map[string]string{
+				"KAFKA_URL":          kafkaUrl,
+				"PERMISSIONS_URL":    permsearch,
+				"DEVICE_REPO_URL":    deviceRepoUrl,
+				"DISABLE_VALIDATION": "true",
+			},
+			ExposedPorts:    []string{"8080/tcp"},
+			WaitingFor:      wait.ForListeningPort("8080/tcp"),
+			AlwaysPullImage: true,
 		},
-	}, func(config *docker.HostConfig) {
-		config.RestartPolicy = docker.RestartPolicy{Name: "unless-stopped"}
+		Started: true,
 	})
 	if err != nil {
 		return "", "", err
@@ -50,20 +49,25 @@ func DeviceManager(ctx context.Context, wg *sync.WaitGroup, kafkaUrl string, dev
 	go func() {
 		defer wg.Done()
 		<-ctx.Done()
-		log.Println("DEBUG: remove container " + container.Container.Name)
-		container.Close()
+		log.Println("DEBUG: remove container device-manager", c.Terminate(context.Background()))
 	}()
-	go Dockerlog(pool, ctx, container, "DEVICE-MANAGER")
-	hostPort = container.GetPort("8080/tcp")
-	err = pool.Retry(func() error {
-		log.Println("try device-manager connection...")
-		_, err := http.Get("http://localhost:" + hostPort)
-		if err != nil {
-			log.Println(err)
-		}
-		return err
-	})
-	return hostPort, container.Container.NetworkSettings.IPAddress, err
+
+	err = docker.Dockerlog(ctx, c, "DEVICE-MANAGER")
+	if err != nil {
+		return "", "", err
+	}
+
+	ipAddress, err = c.ContainerIP(ctx)
+	if err != nil {
+		return "", "", err
+	}
+	temp, err := c.MappedPort(ctx, "8080/tcp")
+	if err != nil {
+		return "", "", err
+	}
+	hostPort = temp.Port()
+
+	return hostPort, ipAddress, err
 }
 
 func DeviceManagerWithDependencies(basectx context.Context, wg *sync.WaitGroup) (managerUrl string, repoUrl string, searchUrl string, err error) {
@@ -90,12 +94,12 @@ func DeviceManagerWithDependenciesAndKafka(basectx context.Context, wg *sync.Wai
 		return kafkaUrl, managerUrl, repoUrl, searchUrl, err
 	}
 
-	_, elasticIp, err := Elasticsearch(ctx, wg)
+	_, elasticIp, err := ElasticSearch(ctx, wg)
 	if err != nil {
 		return kafkaUrl, managerUrl, repoUrl, searchUrl, err
 	}
 
-	_, permIp, err := PermSearch(ctx, wg, kafkaUrl, elasticIp)
+	_, permIp, err := PermSearch(ctx, wg, true, kafkaUrl, elasticIp)
 	if err != nil {
 		return kafkaUrl, managerUrl, repoUrl, searchUrl, err
 	}

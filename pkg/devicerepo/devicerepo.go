@@ -22,6 +22,7 @@ import (
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/devicerepo/fallback"
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/model"
 	"github.com/SENERGY-Platform/models/go/models"
+	"github.com/SENERGY-Platform/permission-search/lib/client"
 	"strings"
 	"sync"
 	"time"
@@ -38,6 +39,7 @@ type DeviceRepo struct {
 	lastDtRefreshUsedFallback bool
 	dtMux                     sync.Mutex
 	createdDt                 map[string]models.DeviceType
+	permissionsearch          client.Client
 }
 
 type Auth interface {
@@ -64,6 +66,7 @@ func New(config configuration.Config, auth Auth) (*DeviceRepo, error) {
 		minCacheDuration: minCacheDuration,
 		maxCacheDuration: maxCacheDuration,
 		createdDt:        map[string]models.DeviceType{},
+		permissionsearch: client.NewClient(config.PermissionsSearchUrl),
 	}, nil
 }
 

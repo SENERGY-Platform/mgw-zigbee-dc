@@ -20,6 +20,6 @@ import (
 	"github.com/SENERGY-Platform/permission-search/lib/tests/docker"
 )
 
-var Kafka = docker.Kafka
+var PermSearch = docker.PermissionSearch
 
-var Zookeeper = docker.Zookeeper
+var ElasticSearch = docker.Elasticsearch

@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/model"
+	"github.com/SENERGY-Platform/permission-search/lib/client"
 	"log"
 	"time"
 )
@@ -76,24 +77,24 @@ func (this *DeviceRepo) getDeviceTypeListFromPermissionSearch() (result []model.
 	if err != nil {
 		return result, err
 	}
-	err, _ = PermissionSearch(token, this.config.PermissionsSearchUrl, QueryMessage{
+	result, _, err = client.Query[[]model.DeviceType](this.permissionsearch, token, client.QueryMessage{
 		Resource: "device-types",
-		Find: &QueryFind{
-			QueryListCommons: QueryListCommons{
+		Find: &client.QueryFind{
+			QueryListCommons: client.QueryListCommons{
 				Limit:  9999,
 				Offset: 0,
 				Rights: "r",
 				SortBy: "name",
 			},
-			Filter: &Selection{
-				Condition: &ConditionConfig{
+			Filter: &client.Selection{
+				Condition: client.ConditionConfig{
 					Feature:   "features.attributes.key",
-					Operation: QueryEqualOperation,
+					Operation: client.QueryEqualOperation,
 					Value:     AttributeUsedForZigbee,
 				},
 			},
 		},
-	}, &result)
+	})
 	if err != nil {
 		return result, err
 	}

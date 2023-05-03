@@ -2,21 +2,23 @@ package docker
 
 import (
 	"context"
-	paho "github.com/eclipse/paho.mqtt.golang"
-	"github.com/ory/dockertest/v3"
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/wait"
 	"log"
-	"math/rand"
-	"strconv"
 	"sync"
 )
 
 func Mqtt(ctx context.Context, wg *sync.WaitGroup) (hostPort string, ipAddress string, err error) {
 	log.Println("start mqtt broker")
-	pool, err := dockertest.NewPool("")
-	if err != nil {
-		return "", "", err
-	}
-	container, err := pool.Run("eclipse-mosquitto", "1.6.12", []string{})
+	c, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: testcontainers.ContainerRequest{
+			Image:           "eclipse-mosquitto:1.6.12",
+			ExposedPorts:    []string{"1883/tcp"},
+			WaitingFor:      wait.ForListeningPort("1883/tcp"),
+			AlwaysPullImage: true,
+		},
+		Started: true,
+	})
 	if err != nil {
 		return "", "", err
 	}
@@ -24,26 +26,19 @@ func Mqtt(ctx context.Context, wg *sync.WaitGroup) (hostPort string, ipAddress s
 	go func() {
 		defer wg.Done()
 		<-ctx.Done()
-		log.Println("DEBUG: remove container " + container.Container.Name)
-		log.Println(container.Close())
+		log.Println("DEBUG: remove container mqtt", c.Terminate(context.Background()))
 	}()
-	go Dockerlog(pool, ctx, container, "MQTT-BROKER")
-	hostPort = container.GetPort("1883/tcp")
-	err = pool.Retry(func() error {
-		log.Println("try to connection to broker...")
-		options := paho.NewClientOptions().
-			SetAutoReconnect(true).
-			SetCleanSession(false).
-			SetClientID("try-test-connection-" + strconv.Itoa(rand.Int())).
-			AddBroker("tcp://localhost:" + hostPort)
 
-		client := paho.NewClient(options)
-		if token := client.Connect(); token.Wait() && token.Error() != nil {
-			log.Println("Error on Mqtt.Connect(): ", token.Error())
-			return token.Error()
-		}
-		defer client.Disconnect(0)
-		return nil
-	})
-	return hostPort, container.Container.NetworkSettings.IPAddress, err
+	ipAddress, err = c.ContainerIP(ctx)
+	if err != nil {
+		return "", "", err
+	}
+
+	port, err := c.MappedPort(ctx, "1883/tcp")
+	if err != nil {
+		return "", "", err
+	}
+	hostPort = port.Port()
+
+	return hostPort, ipAddress, err
 }

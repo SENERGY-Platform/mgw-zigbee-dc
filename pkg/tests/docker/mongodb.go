@@ -18,44 +18,46 @@ package docker
 
 import (
 	"context"
-	"github.com/ory/dockertest/v3"
-	"github.com/ory/dockertest/v3/docker"
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/wait"
 	"log"
-	"net/http"
 	"sync"
 )
 
-func MongoDB(ctx context.Context, wg *sync.WaitGroup) (hostPort string, ipAddress string, err error) {
-	log.Println("start mongodb")
-	pool, err := dockertest.NewPool("")
-	if err != nil {
-		return "", "", err
-	}
-	container, err := pool.RunWithOptions(&dockertest.RunOptions{
-		Repository: "mongo",
-		Tag:        "4.1.11",
-	}, func(config *docker.HostConfig) {
-		config.Tmpfs = map[string]string{"/data/db": "rw"}
+func MongoDB(ctx context.Context, wg *sync.WaitGroup) (hostport string, containerip string, err error) {
+	log.Println("start mongo")
+	c, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: testcontainers.ContainerRequest{
+			Image:        "mongo:4.1.11",
+			ExposedPorts: []string{"27017/tcp"},
+			WaitingFor: wait.ForAll(
+				wait.ForLog("waiting for connections"),
+				wait.ForListeningPort("27017/tcp"),
+			),
+			Tmpfs: map[string]string{"/data/db": "rw"},
+		},
+		Started: true,
 	})
 	if err != nil {
 		return "", "", err
 	}
+
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		<-ctx.Done()
-		log.Println("DEBUG: remove container " + container.Container.Name)
-		container.Close()
+		log.Println("DEBUG: remove container mongo", c.Terminate(context.Background()))
 	}()
-	//go Dockerlog(pool, ctx, container, "MONGODB")
-	hostPort = container.GetPort("27017/tcp")
-	err = pool.Retry(func() error {
-		log.Println("try mongo connection...")
-		_, err := http.Get("http://localhost:" + hostPort)
-		if err != nil {
-			log.Println(err)
-		}
-		return err
-	})
-	return hostPort, container.Container.NetworkSettings.IPAddress, err
+
+	containerip, err = c.ContainerIP(ctx)
+	if err != nil {
+		return "", "", err
+	}
+	temp, err := c.MappedPort(ctx, "27017/tcp")
+	if err != nil {
+		return "", "", err
+	}
+	hostport = temp.Port()
+
+	return hostport, containerip, err
 }
