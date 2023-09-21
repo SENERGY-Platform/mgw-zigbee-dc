@@ -18,7 +18,6 @@ package docker
 
 import (
 	"context"
-	"github.com/SENERGY-Platform/permission-search/lib/tests/docker"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 	"log"
@@ -50,10 +49,6 @@ func DeviceRepo(ctx context.Context, wg *sync.WaitGroup, kafkaUrl string, mongoU
 		<-ctx.Done()
 		log.Println("DEBUG: remove container device-repository", c.Terminate(context.Background()))
 	}()
-	err = docker.Dockerlog(ctx, c, "DEVICE-REPO")
-	if err != nil {
-		return "", "", err
-	}
 
 	ipAddress, err = c.ContainerIP(ctx)
 	if err != nil {
