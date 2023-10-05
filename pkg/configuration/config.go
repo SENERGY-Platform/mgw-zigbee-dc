@@ -36,13 +36,13 @@ type Config struct {
 
 	MgwMqttBroker   string `json:"mgw_mqtt_broker"`
 	MgwMqttClientId string `json:"mgw_mqtt_client_id"`
-	MgwMqttUser     string `json:"mgw_mqtt_user"`
-	MgwMqttPw       string `json:"mgw_mqtt_pw"`
+	MgwMqttUser     string `json:"mgw_mqtt_user" config:"secret"`
+	MgwMqttPw       string `json:"mgw_mqtt_pw" config:"secret"`
 
 	ZigbeeMqttBroker   string `json:"zigbee_mqtt_broker"`
 	ZigbeeMqttClientId string `json:"zigbee_mqtt_client_id"`
-	ZigbeeMqttUser     string `json:"zigbee_mqtt_user"`
-	ZigbeeMqttPw       string `json:"zigbee_mqtt_pw"`
+	ZigbeeMqttUser     string `json:"zigbee_mqtt_user" config:"secret"`
+	ZigbeeMqttPw       string `json:"zigbee_mqtt_pw" config:"secret"`
 
 	ZigbeeQos int `json:"zigbee_qos"`
 
@@ -51,10 +51,10 @@ type Config struct {
 	EventRefreshInterval string `json:"event_refresh_interval"`
 
 	AuthEndpoint             string  `json:"auth_endpoint"`
-	AuthClientId             string  `json:"auth_client_id"`
+	AuthClientId             string  `json:"auth_client_id" config:"secret"`
 	AuthExpirationTimeBuffer float64 `json:"auth_expiration_time_buffer"`
-	AuthUsername             string  `json:"auth_username"`
-	AuthPassword             string  `json:"auth_password"`
+	AuthUsername             string  `json:"auth_username" config:"secret"`
+	AuthPassword             string  `json:"auth_password" config:"secret"`
 
 	DeviceManagerUrl     string `json:"device_manager_url"`
 	PermissionsSearchUrl string `json:"permissions_search_url"`
@@ -106,10 +106,15 @@ func handleEnvironmentVars(config *Config) {
 	configType := configValue.Type()
 	for index := 0; index < configType.NumField(); index++ {
 		fieldName := configType.Field(index).Name
+		fieldConfig := configType.Field(index).Tag.Get("config")
 		envName := fieldNameToEnvName(fieldName)
 		envValue := os.Getenv(envName)
 		if envValue != "" {
-			fmt.Println("use environment variable: ", envName, " = ", envValue)
+			loggedEnvValue := envValue
+			if strings.Contains(fieldConfig, "secret") {
+				loggedEnvValue = "***"
+			}
+			fmt.Println("use environment variable: ", envName, " = ", loggedEnvValue)
 			if configValue.FieldByName(fieldName).Kind() == reflect.Int64 {
 				i, _ := strconv.ParseInt(envValue, 10, 64)
 				configValue.FieldByName(fieldName).SetInt(i)
