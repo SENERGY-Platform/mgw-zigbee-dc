@@ -54,7 +54,7 @@ func (this *Connector) startDeviceHandling(ctx context.Context, wg *sync.WaitGro
 }
 
 func (this *Connector) handleDeviceInfoUpdate(device model.ZigbeeDeviceInfo) {
-	if device.Supported && device.InterviewCompleted {
+	if isValidDevice(device) {
 		deviceId := this.getDeviceId(device)
 		deviceName := this.getDeviceName(device)
 		deviceTypeId, usedFallback, err := this.getDeviceTypeId(device)
@@ -95,6 +95,25 @@ func (this *Connector) handleDeviceInfoUpdate(device model.ZigbeeDeviceInfo) {
 			return
 		}
 	}
+}
+
+func isValidDevice(device model.ZigbeeDeviceInfo) bool {
+	if !device.Supported {
+		return false
+	}
+	if !device.InterviewCompleted {
+		return false
+	}
+	if device.Definition.Vendor == "" {
+		return false
+	}
+	if device.Definition.Model == "" {
+		return false
+	}
+	if len(device.Definition.Exposes) == 0 {
+		return false
+	}
+	return true
 }
 
 func (this *Connector) storeDeviceState(ieeeAddr string, state mgw.State) {
