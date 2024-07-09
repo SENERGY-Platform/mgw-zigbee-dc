@@ -4,7 +4,7 @@ go 1.22
 
 require (
 	github.com/SENERGY-Platform/models/go v0.0.0-20240627082833-157bd627a94f
-	github.com/SENERGY-Platform/permission-search v0.0.14
+	github.com/SENERGY-Platform/permission-search v0.0.16
 	github.com/eclipse/paho.mqtt.golang v1.4.3
 	github.com/testcontainers/testcontainers-go v0.31.0
 )
