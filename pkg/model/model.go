@@ -16,7 +16,10 @@
 
 package model
 
-import "errors"
+import (
+	"errors"
+	"github.com/SENERGY-Platform/models/go/models"
+)
 
 var ErrNotFound = errors.New("not found")
 var ErrNoValueFound = errors.New("no value found")
@@ -66,14 +69,8 @@ type ZigbeeDeviceInfoFeaturePreset struct {
 }
 
 type DeviceType struct {
-	Id          string      `json:"id"`
-	Name        string      `json:"name"`
-	Description string      `json:"description"`
-	Attributes  []Attribute `json:"attributes"`
-}
-
-type Attribute struct {
-	Key    string `json:"key"`
-	Value  string `json:"value"`
-	Origin string `json:"origin"`
+	Id          string             `json:"id"`
+	Name        string             `json:"name"`
+	Description string             `json:"description"`
+	Attributes  []models.Attribute `json:"attributes"`
 }

@@ -19,16 +19,17 @@ package tests
 import (
 	"context"
 	"encoding/json"
-	"errors"
+	"github.com/SENERGY-Platform/device-repository/lib/client"
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/configuration"
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/connector"
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/devicerepo"
+	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/devicerepo/fallback"
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/mgw"
-	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/model"
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/tests/docker"
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/tests/mocks"
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/tests/resources"
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/zigbee2mqtt"
+	"github.com/SENERGY-Platform/models/go/models"
 	paho "github.com/eclipse/paho.mqtt.golang"
 	"log"
 	"path/filepath"
@@ -74,10 +75,6 @@ func testIntegrationWithWorkingPermSearch(t *testing.T, fallbackFile string) {
 
 	config.MgwMqttBroker = "tcp://localhost:" + mqttPort
 	config.ZigbeeMqttBroker = "tcp://localhost:" + mqttPort
-
-	var permCtrl *mocks.PermissionsSearch
-	config.PermissionsSearchUrl, permCtrl, err = mocks.StartPermissionsSearch(ctx, wg)
-	permCtrl.SetResp([]model.DeviceType{}, nil, 200)
 
 	options := paho.NewClientOptions().
 		SetAutoReconnect(true).
@@ -139,7 +136,18 @@ func testIntegrationWithWorkingPermSearch(t *testing.T, fallbackFile string) {
 
 	time.Sleep(200 * time.Millisecond)
 
-	deviceRepo, err := devicerepo.New(config, mocks.Auth("testtoken"))
+	repoclient, db, err := client.NewTestClient()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	f, err := fallback.NewFallback(config.FallbackFile)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	deviceRepo, err := devicerepo.NewWithDependencies(config, mocks.Auth("testtoken"), repoclient, f)
 	if err != nil {
 		t.Error(err)
 		return
@@ -231,16 +239,20 @@ func testIntegrationWithWorkingPermSearch(t *testing.T, fallbackFile string) {
 	})
 
 	t.Run("new device-types, refresh after config.MaxCacheDuration wait", func(t *testing.T) {
-		permCtrl.SetResp([]model.DeviceType{{
+		err = db.SetDeviceType(context.Background(), models.DeviceType{
 			Id:          "dt-id",
 			Name:        "dt-name",
 			Description: "dt-desc",
-			Attributes: []model.Attribute{
+			Attributes: []models.Attribute{
 				{Key: devicerepo.AttributeUsedForZigbee, Value: "true"},
 				{Key: devicerepo.AttributeZigbeeVendor, Value: resources.DeviceInfoExample[1].Definition.Vendor},
 				{Key: devicerepo.AttributeZigbeeModel, Value: resources.DeviceInfoExample[1].Definition.Model},
 			},
-		}}, nil, 200)
+		})
+		if err != nil {
+			t.Error(err)
+			return
+		}
 		time.Sleep(2 * time.Second)
 
 		token := testwatcher.Publish("device-manager/refresh", 2, false, "")
@@ -520,10 +532,6 @@ func testIntegrationWithFallbackUse(t *testing.T, fallbackFile string) {
 	config.MgwMqttBroker = "tcp://localhost:" + mqttPort
 	config.ZigbeeMqttBroker = "tcp://localhost:" + mqttPort
 
-	var permCtrl *mocks.PermissionsSearch
-	config.PermissionsSearchUrl, permCtrl, err = mocks.StartPermissionsSearch(ctx, wg)
-	permCtrl.SetResp(nil, errors.New("test error"), 500)
-
 	options := paho.NewClientOptions().
 		SetAutoReconnect(true).
 		SetCleanSession(true).
@@ -584,7 +592,14 @@ func testIntegrationWithFallbackUse(t *testing.T, fallbackFile string) {
 
 	time.Sleep(200 * time.Millisecond)
 
-	deviceRepo, err := devicerepo.New(config, mocks.Auth("testtoken"))
+	repoclient := client.NewClient("nope")
+
+	f, err := fallback.NewFallback(config.FallbackFile)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	deviceRepo, err := devicerepo.NewWithDependencies(config, mocks.Auth("testtoken"), repoclient, f)
 	if err != nil {
 		t.Error(err)
 		return

@@ -53,7 +53,29 @@ func (this *Connector) startDeviceHandling(ctx context.Context, wg *sync.WaitGro
 	return nil
 }
 
-func (this *Connector) handleDeviceInfoUpdate(device model.ZigbeeDeviceInfo) {
+type DeviceInfoUpdateResult struct {
+	NewDeviceType string
+	UsedFallback  bool
+	Err           error
+}
+
+func (this *DeviceInfoUpdateResult) WithErr(err error) *DeviceInfoUpdateResult {
+	this.Err = err
+	return this
+}
+
+func (this *DeviceInfoUpdateResult) WithNewDeviceType(newDeviceType string) *DeviceInfoUpdateResult {
+	this.NewDeviceType = newDeviceType
+	return this
+}
+
+func (this *DeviceInfoUpdateResult) WithUsedFallback(usedFallback bool) *DeviceInfoUpdateResult {
+	this.UsedFallback = usedFallback
+	return this
+}
+
+func (this *Connector) handleDeviceInfoUpdate(device model.ZigbeeDeviceInfo) *DeviceInfoUpdateResult {
+	result := &DeviceInfoUpdateResult{}
 	if isValidDevice(device) {
 		deviceId := this.getDeviceId(device)
 		deviceName := this.getDeviceName(device)
@@ -64,23 +86,23 @@ func (this *Connector) handleDeviceInfoUpdate(device model.ZigbeeDeviceInfo) {
 				if this.config.CreateMissingDeviceTypes {
 					log.Println("create device type", err)
 					deviceTypeId, err = this.createDeviceType(device)
+					result.WithNewDeviceType(deviceTypeId)
 					if err != nil {
 						log.Println("WARNING: unable to create device type", err)
-						return
+						return result.WithErr(err).WithUsedFallback(usedFallback)
 					}
 					//if no error: continue with mgw device state publish
 				} else {
 					missingDtMsg := this.getMissingDeviceTypeMessage(device)
 					log.Println(missingDtMsg, "\n=============================")
 					this.mgw.SendClientError(missingDtMsg)
-					return
+					return result.WithErr(err).WithUsedFallback(usedFallback)
 				}
 			}
-
 		} else if err != nil {
 			log.Println("ERROR:", err)
 			debug.PrintStack()
-			return
+			return result.WithErr(err).WithUsedFallback(usedFallback)
 		}
 		deviceState := this.getDeviceState(device)
 		this.storeDeviceState(device.IeeeAddress, deviceState)
@@ -92,9 +114,10 @@ func (this *Connector) handleDeviceInfoUpdate(device model.ZigbeeDeviceInfo) {
 		if err != nil {
 			log.Println("ERROR:", err)
 			debug.PrintStack()
-			return
+			return result.WithErr(err).WithUsedFallback(usedFallback)
 		}
 	}
+	return result
 }
 
 func isValidDevice(device model.ZigbeeDeviceInfo) bool {

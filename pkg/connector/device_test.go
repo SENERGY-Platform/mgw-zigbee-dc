@@ -121,7 +121,7 @@ func TestDeviceTypeCreation(t *testing.T) {
 
 	config.FallbackFile = filepath.Join(t.TempDir(), "fallback.json")
 
-	config.DeviceManagerUrl, _, config.PermissionsSearchUrl, err = docker.DeviceManagerWithDependencies(ctx, wg)
+	config.DeviceManagerUrl, config.DeviceRepositoryUrl, _, err = docker.DeviceManagerWithDependencies(ctx, wg)
 	if err != nil {
 		t.Error(err)
 		return
@@ -222,12 +222,27 @@ func TestDeviceTypeCreation(t *testing.T) {
 		return result
 	}
 
-	c.handleDeviceInfoUpdate(resources.DeviceInfoExample[1])
-
-	time.Sleep(2 * time.Second)
+	t.Run("initial device info", func(t *testing.T) {
+		result := c.handleDeviceInfoUpdate(resources.DeviceInfoExample[1])
+		if result == nil {
+			t.Error("device info was nil")
+			return
+		}
+		if result.Err != nil {
+			t.Error(err)
+			return
+		}
+		if result.UsedFallback {
+			t.Error("fallback was true")
+		}
+		if result.NewDeviceType == "" {
+			t.Error("NewDeviceType was empty")
+		}
+	})
 
 	dtId := ""
 	t.Run("check device repo", func(t *testing.T) {
+		time.Sleep(2 * time.Second)
 		var usedFallback bool
 		dtId, usedFallback, err = c.devicerepo.FindDeviceTypeId(resources.DeviceInfoExample[1])
 		if err != nil {
@@ -451,6 +466,38 @@ func TestDeviceTypeCreation(t *testing.T) {
 	t.Run("check mgw messages", func(t *testing.T) {
 		expected := map[string][]string{
 			"device-manager/device/mgw-zigbee-dc": []string{
+				"{\"method\":\"set\",\"device_id\":\"zigbee:0x00178801020a70e7\",\"data\":{\"name\":\"Hue Ingo\",\"state\":\"online\",\"device_type\":\"" + dtId + "\"}}",
+			},
+		}
+		actualMessages := getMessages()
+		if !reflect.DeepEqual(actualMessages, expected) {
+			t.Errorf("\n%#v\n%#v\n", expected, actualMessages)
+			actualJson, _ := json.Marshal(actualMessages)
+			expectedJson, _ := json.Marshal(expected)
+			t.Log(string(actualJson))
+			t.Log(string(expectedJson))
+		}
+	})
+
+	t.Run("repeated device info handling", func(t *testing.T) {
+		result := c.handleDeviceInfoUpdate(resources.DeviceInfoExample[1])
+		if result.Err != nil {
+			t.Error(err)
+			return
+		}
+		if result.UsedFallback {
+			t.Error("fallback was true")
+		}
+		if result.NewDeviceType != "" {
+			t.Error("NewDeviceType was not empty")
+		}
+	})
+
+	t.Run("no new device-type should be used", func(t *testing.T) {
+		time.Sleep(2 * time.Second)
+		expected := map[string][]string{
+			"device-manager/device/mgw-zigbee-dc": []string{
+				"{\"method\":\"set\",\"device_id\":\"zigbee:0x00178801020a70e7\",\"data\":{\"name\":\"Hue Ingo\",\"state\":\"online\",\"device_type\":\"" + dtId + "\"}}",
 				"{\"method\":\"set\",\"device_id\":\"zigbee:0x00178801020a70e7\",\"data\":{\"name\":\"Hue Ingo\",\"state\":\"online\",\"device_type\":\"" + dtId + "\"}}",
 			},
 		}

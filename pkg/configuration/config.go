@@ -56,11 +56,11 @@ type Config struct {
 	AuthUsername             string  `json:"auth_username" config:"secret"`
 	AuthPassword             string  `json:"auth_password" config:"secret"`
 
-	DeviceManagerUrl     string `json:"device_manager_url"`
-	PermissionsSearchUrl string `json:"permissions_search_url"`
-	FallbackFile         string `json:"fallback_file"`
-	MinCacheDuration     string `json:"min_cache_duration"`
-	MaxCacheDuration     string `json:"max_cache_duration"`
+	DeviceManagerUrl    string `json:"device_manager_url"`
+	DeviceRepositoryUrl string `json:"device_repository_url"`
+	FallbackFile        string `json:"fallback_file"`
+	MinCacheDuration    string `json:"min_cache_duration"`
+	MaxCacheDuration    string `json:"max_cache_duration"`
 
 	CreateMissingDeviceTypes                    bool   `json:"create_missing_device_types"`
 	CreateMissingDeviceTypesWithDeviceClass     string `json:"create_missing_device_types_with_device_class"`

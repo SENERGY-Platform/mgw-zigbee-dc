@@ -20,8 +20,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/SENERGY-Platform/device-repository/lib/client"
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/model"
-	"github.com/SENERGY-Platform/permission-search/lib/client"
 	"log"
 	"time"
 )
@@ -49,7 +49,7 @@ func (this *DeviceRepo) getLastDtRefreshUsedFallback() bool {
 func (this *DeviceRepo) refreshDeviceTypeList() error {
 	this.dtMux.Lock()
 	defer this.dtMux.Unlock()
-	result, err := this.getDeviceTypeListFromPermissionSearch()
+	result, err := this.getDeviceTypeListFromPlatform()
 	if err == nil {
 		this.deviceTypes = result
 		this.lastDtRefresh = time.Now()
@@ -72,31 +72,26 @@ func (this *DeviceRepo) refreshDeviceTypeList() error {
 	}
 }
 
-func (this *DeviceRepo) getDeviceTypeListFromPermissionSearch() (result []model.DeviceType, err error) {
+func (this *DeviceRepo) getDeviceTypeListFromPlatform() (result []model.DeviceType, err error) {
 	token, err := this.getToken()
 	if err != nil {
 		return result, err
 	}
-	result, _, err = client.Query[[]model.DeviceType](this.permissionsearch, token, client.QueryMessage{
-		Resource: "device-types",
-		Find: &client.QueryFind{
-			QueryListCommons: client.QueryListCommons{
-				Limit:  9999,
-				Offset: 0,
-				Rights: "r",
-				SortBy: "name",
-			},
-			Filter: &client.Selection{
-				Condition: client.ConditionConfig{
-					Feature:   "features.attributes.key",
-					Operation: client.QueryEqualOperation,
-					Value:     AttributeUsedForZigbee,
-				},
-			},
-		},
+	list, err, _ := this.repoclient.ListDeviceTypesV3(token, client.DeviceTypeListOptions{
+		Limit:         9999,
+		Offset:        0,
+		AttributeKeys: []string{AttributeUsedForZigbee},
 	})
 	if err != nil {
 		return result, err
+	}
+	for _, dt := range list {
+		result = append(result, model.DeviceType{
+			Id:          dt.Id,
+			Name:        dt.Name,
+			Description: dt.Description,
+			Attributes:  dt.Attributes,
+		})
 	}
 	return result, nil
 }
