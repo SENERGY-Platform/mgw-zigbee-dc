@@ -111,7 +111,7 @@ func (this *DeviceRepo) getMatchingDeviceType(devicetypes []model.DeviceType, de
 		for _, attr := range dt.Attributes {
 			attrMap[attr.Key] = attr.Value
 		}
-		if vendor, vendorIsSet := attrMap[AttributeZigbeeVendor]; vendorIsSet && strings.TrimSpace(vendor) == strings.TrimSpace(device.Definition.Vendor) {
+		if vendor, vendorIsSet := attrMap[AttributeZigbeeVendor]; vendorIsSet && strings.ToLower(strings.TrimSpace(vendor)) == strings.ToLower(strings.TrimSpace(device.Definition.Vendor)) {
 			if m, modelIsSet := attrMap[AttributeZigbeeModel]; modelIsSet && strings.TrimSpace(m) == strings.TrimSpace(device.Definition.Model) {
 				return dt, true
 			}
