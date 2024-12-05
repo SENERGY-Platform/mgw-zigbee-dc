@@ -24,14 +24,14 @@ import (
 	"sync"
 )
 
-func DeviceManager(ctx context.Context, wg *sync.WaitGroup, kafkaUrl string, deviceRepoUrl string, permsearch string) (hostPort string, ipAddress string, err error) {
+func DeviceManager(ctx context.Context, wg *sync.WaitGroup, kafkaUrl string, deviceRepoUrl string, permv2Url string) (hostPort string, ipAddress string, err error) {
 	log.Println("start device-manager")
 	c, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
 			Image: "ghcr.io/senergy-platform/device-manager:dev",
 			Env: map[string]string{
 				"KAFKA_URL":          kafkaUrl,
-				"PERMISSIONS_URL":    permsearch,
+				"PERMISSIONS_V2_URL": permv2Url,
 				"DEVICE_REPO_URL":    deviceRepoUrl,
 				"DISABLE_VALIDATION": "true",
 			},
@@ -64,12 +64,12 @@ func DeviceManager(ctx context.Context, wg *sync.WaitGroup, kafkaUrl string, dev
 	return hostPort, ipAddress, err
 }
 
-func DeviceManagerWithDependencies(basectx context.Context, wg *sync.WaitGroup) (managerUrl string, repoUrl string, searchUrl string, err error) {
-	_, managerUrl, repoUrl, searchUrl, err = DeviceManagerWithDependenciesAndKafka(basectx, wg)
+func DeviceManagerWithDependencies(basectx context.Context, wg *sync.WaitGroup) (managerUrl string, repoUrl string, permv2Url string, err error) {
+	_, managerUrl, repoUrl, permv2Url, err = DeviceManagerWithDependenciesAndKafka(basectx, wg)
 	return
 }
 
-func DeviceManagerWithDependenciesAndKafka(basectx context.Context, wg *sync.WaitGroup) (kafkaUrl string, managerUrl string, repoUrl string, searchUrl string, err error) {
+func DeviceManagerWithDependenciesAndKafka(basectx context.Context, wg *sync.WaitGroup) (kafkaUrl string, managerUrl string, repoUrl string, permv2Url string, err error) {
 	ctx, cancel := context.WithCancel(basectx)
 	defer func() {
 		if err != nil {
@@ -79,42 +79,38 @@ func DeviceManagerWithDependenciesAndKafka(basectx context.Context, wg *sync.Wai
 
 	_, zkIp, err := Zookeeper(ctx, wg)
 	if err != nil {
-		return kafkaUrl, managerUrl, repoUrl, searchUrl, err
+		return kafkaUrl, managerUrl, repoUrl, permv2Url, err
 	}
 	zookeeperUrl := zkIp + ":2181"
 
 	kafkaUrl, err = Kafka(ctx, wg, zookeeperUrl)
 	if err != nil {
-		return kafkaUrl, managerUrl, repoUrl, searchUrl, err
+		return kafkaUrl, managerUrl, repoUrl, permv2Url, err
 	}
-
-	_, elasticIp, err := OpenSearch(ctx, wg)
-	if err != nil {
-		return kafkaUrl, managerUrl, repoUrl, searchUrl, err
-	}
-
-	_, permIp, err := PermSearch(ctx, wg, false, kafkaUrl, elasticIp)
-	if err != nil {
-		return kafkaUrl, managerUrl, repoUrl, searchUrl, err
-	}
-	searchUrl = "http://" + permIp + ":8080"
 
 	_, mongoIp, err := MongoDB(ctx, wg)
 	if err != nil {
-		return kafkaUrl, managerUrl, repoUrl, searchUrl, err
+		return kafkaUrl, managerUrl, repoUrl, permv2Url, err
 	}
+	mongoUrl := "mongodb://" + mongoIp + ":27017"
 
-	_, repoIp, err := DeviceRepo(ctx, wg, kafkaUrl, "mongodb://"+mongoIp+":27017", searchUrl)
+	_, permV2Ip, err := PermissionsV2(ctx, wg, mongoUrl, kafkaUrl)
 	if err != nil {
-		return kafkaUrl, managerUrl, repoUrl, searchUrl, err
+		return kafkaUrl, managerUrl, repoUrl, permv2Url, err
+	}
+	permv2Url = "http://" + permV2Ip + ":8080"
+
+	_, repoIp, err := DeviceRepo(ctx, wg, kafkaUrl, mongoUrl, permv2Url)
+	if err != nil {
+		return kafkaUrl, managerUrl, repoUrl, permv2Url, err
 	}
 	repoUrl = "http://" + repoIp + ":8080"
 
-	_, managerIp, err := DeviceManager(ctx, wg, kafkaUrl, repoUrl, searchUrl)
+	_, managerIp, err := DeviceManager(ctx, wg, kafkaUrl, repoUrl, permv2Url)
 	if err != nil {
-		return kafkaUrl, managerUrl, repoUrl, searchUrl, err
+		return kafkaUrl, managerUrl, repoUrl, permv2Url, err
 	}
 	managerUrl = "http://" + managerIp + ":8080"
 
-	return kafkaUrl, managerUrl, repoUrl, searchUrl, err
+	return kafkaUrl, managerUrl, repoUrl, permv2Url, err
 }
