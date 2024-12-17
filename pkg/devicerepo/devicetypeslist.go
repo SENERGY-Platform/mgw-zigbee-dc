@@ -77,7 +77,7 @@ func (this *DeviceRepo) getDeviceTypeListFromPlatform() (result []model.DeviceTy
 	if err != nil {
 		return result, err
 	}
-	list, err, _ := this.repoclient.ListDeviceTypesV3(token, client.DeviceTypeListOptions{
+	list, _, err, _ := this.repoclient.ListDeviceTypesV3(token, client.DeviceTypeListOptions{
 		Limit:         9999,
 		Offset:        0,
 		AttributeKeys: []string{AttributeUsedForZigbee},
