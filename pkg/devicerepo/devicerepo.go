@@ -51,7 +51,9 @@ func New(config configuration.Config, auth Auth) (*DeviceRepo, error) {
 	if err != nil {
 		return nil, err
 	}
-	repoclient := client.NewClient(config.DeviceRepositoryUrl)
+	repoclient := client.NewClient(config.DeviceRepositoryUrl, func() (token string, err error) {
+		return auth.EnsureAccess(config)
+	})
 	return NewWithDependencies(config, auth, repoclient, f)
 }
 

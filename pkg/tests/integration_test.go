@@ -592,7 +592,9 @@ func testIntegrationWithFallbackUse(t *testing.T, fallbackFile string) {
 
 	time.Sleep(200 * time.Millisecond)
 
-	repoclient := client.NewClient("nope")
+	repoclient := client.NewClient("nope", func() (token string, err error) {
+		return mocks.Auth("testtoken").EnsureAccess(config)
+	})
 
 	f, err := fallback.NewFallback(config.FallbackFile)
 	if err != nil {
