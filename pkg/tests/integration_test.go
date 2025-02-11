@@ -248,6 +248,8 @@ func testIntegrationWithWorkingPermSearch(t *testing.T, fallbackFile string) {
 				{Key: devicerepo.AttributeZigbeeVendor, Value: resources.DeviceInfoExample[1].Definition.Vendor},
 				{Key: devicerepo.AttributeZigbeeModel, Value: resources.DeviceInfoExample[1].Definition.Model},
 			},
+		}, func(deviceType models.DeviceType) error {
+			return nil
 		})
 		if err != nil {
 			t.Error(err)

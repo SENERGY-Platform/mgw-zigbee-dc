@@ -17,7 +17,7 @@
 package docker
 
 import (
-	"github.com/SENERGY-Platform/device-repository/lib/tests/testutils/docker"
+	"github.com/SENERGY-Platform/device-repository/lib/tests/docker"
 )
 
 var Kafka = docker.Kafka
