@@ -23,6 +23,7 @@ import (
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/devicerepo/fallback"
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/model"
 	"github.com/SENERGY-Platform/models/go/models"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -86,7 +87,7 @@ func (this *DeviceRepo) FindDeviceTypeId(device model.ZigbeeDeviceInfo) (dtId st
 	if err != nil {
 		return "", this.getLastDtRefreshUsedFallback(), err
 	}
-	deviceType, ok := this.getMatchingDeviceType(deviceTypes, device)
+	deviceType, ok := getMatchingDeviceType(deviceTypes, device)
 	if !ok && time.Since(this.lastDtRefresh) > this.minCacheDuration {
 		err = this.refreshDeviceTypeList()
 		if err != nil {
@@ -96,7 +97,7 @@ func (this *DeviceRepo) FindDeviceTypeId(device model.ZigbeeDeviceInfo) (dtId st
 		if err != nil {
 			return "", this.getLastDtRefreshUsedFallback(), err
 		}
-		deviceType, ok = this.getMatchingDeviceType(deviceTypes, device)
+		deviceType, ok = getMatchingDeviceType(deviceTypes, device)
 	}
 	if !ok {
 		return "", this.getLastDtRefreshUsedFallback(), fmt.Errorf("%w: vendor=%v model=%v", model.NoMatchingDeviceTypeFound, device.Definition.Vendor, device.Definition.Model)
@@ -107,14 +108,14 @@ func (this *DeviceRepo) FindDeviceTypeId(device model.ZigbeeDeviceInfo) (dtId st
 const AttributeZigbeeVendor = "senergy/zigbee-vendor"
 const AttributeZigbeeModel = "senergy/zigbee-model"
 
-func (this *DeviceRepo) getMatchingDeviceType(devicetypes []model.DeviceType, device model.ZigbeeDeviceInfo) (model.DeviceType, bool) {
+func getMatchingDeviceType(devicetypes []model.DeviceType, device model.ZigbeeDeviceInfo) (model.DeviceType, bool) {
 	for _, dt := range devicetypes {
-		attrMap := map[string]string{}
+		attrMap := map[string][]string{}
 		for _, attr := range dt.Attributes {
-			attrMap[attr.Key] = attr.Value
+			attrMap[attr.Key] = append(attrMap[attr.Key], strings.ToLower(strings.TrimSpace(attr.Value)))
 		}
-		if vendor, vendorIsSet := attrMap[AttributeZigbeeVendor]; vendorIsSet && strings.ToLower(strings.TrimSpace(vendor)) == strings.ToLower(strings.TrimSpace(device.Definition.Vendor)) {
-			if m, modelIsSet := attrMap[AttributeZigbeeModel]; modelIsSet && strings.TrimSpace(m) == strings.TrimSpace(device.Definition.Model) {
+		if vendors, vendorIsSet := attrMap[AttributeZigbeeVendor]; vendorIsSet && slices.Contains(vendors, strings.ToLower(strings.TrimSpace(device.Definition.Vendor))) {
+			if modelList, modelIsSet := attrMap[AttributeZigbeeModel]; modelIsSet && slices.Contains(modelList, strings.ToLower(strings.TrimSpace(device.Definition.Model))) {
 				return dt, true
 			}
 		}
