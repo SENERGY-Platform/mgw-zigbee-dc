@@ -86,11 +86,22 @@ func (this *DeviceRepo) getDeviceTypeListFromPlatform() (result []model.DeviceTy
 		return result, err
 	}
 	for _, dt := range list {
+		services := []model.Service{}
+		for _, service := range dt.Services {
+			services = append(services, model.Service{
+				Id:          service.Id,
+				LocalId:     service.LocalId,
+				Name:        service.Name,
+				Interaction: service.Interaction,
+				Attributes:  service.Attributes,
+			})
+		}
 		result = append(result, model.DeviceType{
 			Id:          dt.Id,
 			Name:        dt.Name,
 			Description: dt.Description,
 			Attributes:  dt.Attributes,
+			Services:    services,
 		})
 	}
 	return result, nil
