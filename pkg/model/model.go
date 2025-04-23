@@ -73,4 +73,15 @@ type DeviceType struct {
 	Name        string             `json:"name"`
 	Description string             `json:"description"`
 	Attributes  []models.Attribute `json:"attributes"`
+	Services    []Service          `json:"services"`
 }
+
+type Service struct {
+	Id          string             `json:"id"`
+	LocalId     string             `json:"local_id"`
+	Name        string             `json:"name"`
+	Interaction Interaction        `json:"interaction"`
+	Attributes  []models.Attribute `json:"attributes"`
+}
+
+type Interaction = models.Interaction

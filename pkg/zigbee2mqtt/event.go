@@ -18,6 +18,7 @@ package zigbee2mqtt
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/model"
 	paho "github.com/eclipse/paho.mqtt.golang"
 	"log"
@@ -42,7 +43,7 @@ func (this *Client) eventHandler(client paho.Client, message paho.Message) {
 	}
 	deviceName := strings.TrimPrefix(topic, this.config.ZigbeeMqttTopicPrefix)
 	device, err := this.register.GetByFriendlyName(nil, deviceName)
-	if err == model.ErrNotFound {
+	if errors.Is(err, model.ErrNotFound) {
 		return
 	}
 	if err != nil {

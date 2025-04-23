@@ -105,6 +105,29 @@ func (this *DeviceRepo) FindDeviceTypeId(device model.ZigbeeDeviceInfo) (dtId st
 	return deviceType.Id, this.getLastDtRefreshUsedFallback(), nil
 }
 
+func (this *DeviceRepo) FindDeviceType(device model.ZigbeeDeviceInfo) (dt model.DeviceType, usedFallback bool, err error) {
+	deviceTypes, err := this.ListZigbeeDeviceTypes()
+	if err != nil {
+		return dt, this.getLastDtRefreshUsedFallback(), err
+	}
+	deviceType, ok := getMatchingDeviceType(deviceTypes, device)
+	if !ok && time.Since(this.lastDtRefresh) > this.minCacheDuration {
+		err = this.refreshDeviceTypeList()
+		if err != nil {
+			return dt, this.getLastDtRefreshUsedFallback(), err
+		}
+		deviceTypes, err = this.ListZigbeeDeviceTypes()
+		if err != nil {
+			return dt, this.getLastDtRefreshUsedFallback(), err
+		}
+		deviceType, ok = getMatchingDeviceType(deviceTypes, device)
+	}
+	if !ok {
+		return dt, this.getLastDtRefreshUsedFallback(), fmt.Errorf("%w: vendor=%v model=%v", model.NoMatchingDeviceTypeFound, device.Definition.Vendor, device.Definition.Model)
+	}
+	return deviceType, this.getLastDtRefreshUsedFallback(), nil
+}
+
 const AttributeZigbeeVendor = "senergy/zigbee-vendor"
 const AttributeZigbeeModel = "senergy/zigbee-model"
 

@@ -108,6 +108,7 @@ type CommandDesc struct {
 }
 
 type DeviceRepo interface {
+	FindDeviceType(device model.ZigbeeDeviceInfo) (dt model.DeviceType, usedFallback bool, err error)
 	FindDeviceTypeId(device model.ZigbeeDeviceInfo) (dtId string, usedFallback bool, err error)
 	CreateDeviceTypeWithDistinctAttributes(dt models.DeviceType, attributeKeys []string) (result models.DeviceType, code int, err error)
 }

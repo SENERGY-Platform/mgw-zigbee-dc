@@ -7,6 +7,7 @@ toolchain go1.23.2
 require (
 	github.com/SENERGY-Platform/device-repository v0.2.5
 	github.com/SENERGY-Platform/models/go v0.0.0-20241007061544-de7132ae94e4
+	github.com/casbin/govaluate v1.3.0
 	github.com/eclipse/paho.mqtt.golang v1.4.3
 	github.com/testcontainers/testcontainers-go v0.33.0
 )
