@@ -4,6 +4,8 @@
 
 TODO
 
+## Auth
+The 'auth_endpoint' config field can/should be left empty if this component is used in a MGW with API-Proxy
 
 ### Services
 

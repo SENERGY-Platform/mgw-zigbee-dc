@@ -162,6 +162,8 @@ func TestDeviceTypeCreation(t *testing.T) {
 	config.MgwMqttBroker = "tcp://localhost:" + mqttPort
 	config.ZigbeeMqttBroker = "tcp://localhost:" + mqttPort
 
+	config.AuthEndpoint = "will be ignored by auth mock"
+
 	c := Connector{
 		config:         config,
 		devicestate:    map[string]mgw.State{},

@@ -79,6 +79,9 @@ func NewWithDependencies(config configuration.Config, auth Auth, repoclient clie
 }
 
 func (this *DeviceRepo) getToken() (string, error) {
+	if !this.config.AuthEnabled() {
+		return "", nil
+	}
 	return this.auth.EnsureAccess(this.config)
 }
 

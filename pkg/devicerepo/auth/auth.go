@@ -37,6 +37,9 @@ type Auth struct {
 }
 
 func (openid *Auth) EnsureAccess(config configuration.Config) (token string, err error) {
+	if !config.AuthEnabled() {
+		return "", nil
+	}
 	duration := time.Now().Sub(openid.RequestTime).Seconds()
 
 	if openid.AccessToken != "" && openid.ExpiresIn-config.AuthExpirationTimeBuffer > duration {

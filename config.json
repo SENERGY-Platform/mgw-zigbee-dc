@@ -19,7 +19,7 @@
 
     "event_refresh_interval": "1h",
 
-    "auth_endpoint": "https://auth.senergy.infai.org",
+    "auth_endpoint": "",
     "auth_client_id": "client-connector-lib",
     "auth_expiration_time_buffer": 2,
     "auth_username": "",
