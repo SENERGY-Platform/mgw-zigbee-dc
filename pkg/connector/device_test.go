@@ -21,16 +21,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/configuration"
-	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/devicerepo"
-	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/mgw"
-	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/model"
-	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/tests/docker"
-	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/tests/mocks"
-	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/tests/resources"
-	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/zigbee2mqtt"
-	"github.com/SENERGY-Platform/models/go/models"
-	paho "github.com/eclipse/paho.mqtt.golang"
 	"log"
 	"net/http"
 	"net/url"
@@ -41,6 +31,17 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/configuration"
+	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/devicerepo"
+	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/mgw"
+	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/model"
+	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/tests/docker"
+	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/tests/mocks"
+	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/tests/resources"
+	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/zigbee2mqtt"
+	"github.com/SENERGY-Platform/models/go/models"
+	paho "github.com/eclipse/paho.mqtt.golang"
 )
 
 func ExampleGetMissingDeviceTypeMessage() {
@@ -121,7 +122,7 @@ func TestDeviceTypeCreation(t *testing.T) {
 
 	config.FallbackFile = filepath.Join(t.TempDir(), "fallback.json")
 
-	config.DeviceManagerUrl, config.DeviceRepositoryUrl, _, err = docker.DeviceManagerWithDependencies(ctx, wg)
+	config.DeviceRepositoryUrl, _, err = docker.DeviceManagerWithDependencies(ctx, wg)
 	if err != nil {
 		t.Error(err)
 		return
@@ -138,7 +139,7 @@ func TestDeviceTypeCreation(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	req, err := http.NewRequest(http.MethodPost, config.DeviceManagerUrl+"/protocols", buf)
+	req, err := http.NewRequest(http.MethodPost, config.DeviceRepositoryUrl+"/protocols", buf)
 	if err != nil {
 		t.Error(err)
 		return
@@ -255,7 +256,7 @@ func TestDeviceTypeCreation(t *testing.T) {
 			t.Error(usedFallback)
 			return
 		}
-		req, err := http.NewRequest(http.MethodGet, config.DeviceManagerUrl+"/device-types/"+url.PathEscape(dtId), buf)
+		req, err := http.NewRequest(http.MethodGet, config.DeviceRepositoryUrl+"/device-types/"+url.PathEscape(dtId), buf)
 		if err != nil {
 			t.Error(err)
 			return

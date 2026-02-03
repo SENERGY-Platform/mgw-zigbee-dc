@@ -56,7 +56,6 @@ type Config struct {
 	AuthUsername             string  `json:"auth_username" config:"secret"`
 	AuthPassword             string  `json:"auth_password" config:"secret"`
 
-	DeviceManagerUrl    string `json:"device_manager_url"`
 	DeviceRepositoryUrl string `json:"device_repository_url"`
 	FallbackFile        string `json:"fallback_file"`
 	MinCacheDuration    string `json:"min_cache_duration"`

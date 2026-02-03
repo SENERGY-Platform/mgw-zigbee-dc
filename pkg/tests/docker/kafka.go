@@ -21,5 +21,3 @@ import (
 )
 
 var Kafka = docker.Kafka
-
-var Zookeeper = docker.Zookeeper
