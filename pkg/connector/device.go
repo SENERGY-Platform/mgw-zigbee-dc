@@ -21,16 +21,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/devicerepo"
-	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/mgw"
-	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/model"
-	"github.com/SENERGY-Platform/models/go/models"
 	"log"
 	"reflect"
 	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/devicerepo"
+	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/mgw"
+	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/model"
+	"github.com/SENERGY-Platform/models/go/models"
 )
 
 func (this *Connector) startDeviceHandling(ctx context.Context, wg *sync.WaitGroup) error {
@@ -181,6 +182,14 @@ func (this *Connector) getDeviceState(device model.ZigbeeDeviceInfo) mgw.State {
 }
 
 func (this *Connector) getDeviceTypeId(device model.ZigbeeDeviceInfo) (dtId string, usedFallback bool, err error) {
+	var known bool
+	dtId, known, usedFallback, err = this.devicerepo.GetKnownDeviceDeviceTypeId(this.getDeviceId(device))
+	if err != nil {
+		return "", usedFallback, err
+	}
+	if known {
+		return dtId, usedFallback, nil
+	}
 	return this.devicerepo.FindDeviceTypeId(device)
 }
 

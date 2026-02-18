@@ -18,6 +18,10 @@ package connector
 
 import (
 	"context"
+	"log"
+	"runtime/debug"
+	"sync"
+
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/configuration"
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/devicerepo"
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/devicerepo/auth"
@@ -25,9 +29,6 @@ import (
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/model"
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/zigbee2mqtt"
 	"github.com/SENERGY-Platform/models/go/models"
-	"log"
-	"runtime/debug"
-	"sync"
 )
 
 func Start(ctx context.Context, wg *sync.WaitGroup, config configuration.Config) (connector *Connector, err error) {
@@ -111,6 +112,7 @@ type DeviceRepo interface {
 	FindDeviceType(device model.ZigbeeDeviceInfo) (dt model.DeviceType, usedFallback bool, err error)
 	FindDeviceTypeId(device model.ZigbeeDeviceInfo) (dtId string, usedFallback bool, err error)
 	CreateDeviceTypeWithDistinctAttributes(dt models.DeviceType, attributeKeys []string) (result models.DeviceType, code int, err error)
+	GetKnownDeviceDeviceTypeId(deviceId string) (dtId string, known bool, usedFallback bool, err error)
 }
 
 func (this *Connector) Event(device model.ZigbeeDeviceInfo, payload []byte) {
