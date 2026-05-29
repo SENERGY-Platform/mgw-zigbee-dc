@@ -18,12 +18,13 @@ package zigbee2mqtt
 
 import (
 	"context"
-	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/configuration"
-	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/model"
-	paho "github.com/eclipse/paho.mqtt.golang"
 	"log"
 	"sync"
 	"time"
+
+	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/configuration"
+	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/model"
+	paho "github.com/eclipse/paho.mqtt.golang"
 )
 
 type Client struct {
@@ -42,7 +43,7 @@ type Connector interface {
 }
 
 func New(ctx context.Context, wg *sync.WaitGroup, config configuration.Config, connector Connector) (*Client, error) {
-	log.Println("start zwavejs2mqtt client")
+	config.GetLogger().Info("start zigbee2mqtt client")
 	client := &Client{
 		debug:     config.Debug,
 		config:    config,
@@ -61,19 +62,20 @@ func New(ctx context.Context, wg *sync.WaitGroup, config configuration.Config, c
 		SetWriteTimeout(10 * time.Second).
 		SetOrderMatters(false).
 		SetConnectionLostHandler(func(_ paho.Client, err error) {
-			log.Println("connection to zigbee2mqtt broker lost")
+			config.GetLogger().Error("connection to zigbee2mqtt broker lost", "error", err)
 		}).
 		SetOnConnectHandler(func(_ paho.Client) {
-			log.Println("connected to zigbee2mqtt broker")
+			config.GetLogger().Info("connected to zigbee2mqtt broker")
 			err := client.startListener()
 			if err != nil {
+				config.GetLogger().Error("fatal: unable to start listener", "error", err)
 				log.Fatal("FATAL: ", err)
 			}
 		})
 
 	client.mqtt = paho.NewClient(options)
 	if token := client.mqtt.Connect(); token.Wait() && token.Error() != nil {
-		log.Println("Error on MqttStart.Connect(): ", token.Error())
+		config.GetLogger().Error("unable to connect to zigbee2mqtt broker", "error", token.Error())
 		return client, token.Error()
 	}
 
@@ -91,7 +93,7 @@ func (this *Client) startEventRefreshLoop(ctx context.Context) (err error) {
 	if this.config.EventRefreshInterval != "" && this.config.EventRefreshInterval != "-" {
 		dur, err := time.ParseDuration(this.config.EventRefreshInterval)
 		if err != nil {
-			log.Println("ERROR: unable to parse EventRefreshInterval", err)
+			this.config.GetLogger().Error("unable to parse EventRefreshInterval", "error", err)
 			return err
 		}
 		ticker := time.NewTicker(dur)
@@ -102,7 +104,7 @@ func (this *Client) startEventRefreshLoop(ctx context.Context) (err error) {
 				case <-ticker.C:
 					err := this.RefreshEventValues()
 					if err != nil {
-						log.Println("ERROR: RefreshEventValues()", err)
+						this.config.GetLogger().Error("unable to refresh event values", "error", err)
 					}
 				case <-ctx.Done():
 					return

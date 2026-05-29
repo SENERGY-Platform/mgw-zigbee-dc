@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"reflect"
 	"runtime/debug"
 	"strconv"
@@ -38,11 +37,11 @@ func (this *Connector) startDeviceHandling(ctx context.Context, wg *sync.WaitGro
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		log.Println("start device info handling")
+		this.config.GetLogger().Info("start device info handling")
 		for {
 			select {
 			case <-ctx.Done():
-				log.Println("stop device info handling")
+				this.config.GetLogger().Info("stop device info handling")
 				return
 			case devices := <-this.deviceupdatebuffer:
 				for _, device := range devices {
@@ -82,26 +81,25 @@ func (this *Connector) handleDeviceInfoUpdate(device model.ZigbeeDeviceInfo) *De
 		deviceName := this.getDeviceName(device)
 		deviceTypeId, usedFallback, err := this.getDeviceTypeId(device)
 		if errors.Is(err, model.NoMatchingDeviceTypeFound) {
-			log.Println("WARNING: unable to find matching device type", err)
+			this.config.GetLogger().Warn("unable to find matching device type", "deviceIeeeAddress", device.IeeeAddress, "error", err)
 			if !usedFallback {
 				if this.config.CreateMissingDeviceTypes {
-					log.Println("create device type", err)
+					this.config.GetLogger().Info("create device type", "deviceIeeeAddress", device.IeeeAddress, "error", err)
 					deviceTypeId, err = this.createDeviceType(device)
 					result.WithNewDeviceType(deviceTypeId)
 					if err != nil {
-						log.Println("WARNING: unable to create device type", err)
+						this.config.GetLogger().Error("unable to create device type", "error", err)
 						return result.WithErr(err).WithUsedFallback(usedFallback)
 					}
 					//if no error: continue with mgw device state publish
 				} else {
 					missingDtMsg := this.getMissingDeviceTypeMessage(device)
-					log.Println(missingDtMsg, "\n=============================")
 					this.mgw.SendClientError(missingDtMsg)
 					return result.WithErr(err).WithUsedFallback(usedFallback)
 				}
 			}
 		} else if err != nil {
-			log.Println("ERROR:", err)
+			this.config.GetLogger().Error("unable to get device type", "deviceIeeeAddress", device.IeeeAddress, "error", err)
 			debug.PrintStack()
 			return result.WithErr(err).WithUsedFallback(usedFallback)
 		}
@@ -113,8 +111,7 @@ func (this *Connector) handleDeviceInfoUpdate(device model.ZigbeeDeviceInfo) *De
 			DeviceType: deviceTypeId,
 		})
 		if err != nil {
-			log.Println("ERROR:", err)
-			debug.PrintStack()
+			this.config.GetLogger().Error("unable to set device", "deviceIeeeAddress", device.IeeeAddress, "error", err)
 			return result.WithErr(err).WithUsedFallback(usedFallback)
 		}
 	}

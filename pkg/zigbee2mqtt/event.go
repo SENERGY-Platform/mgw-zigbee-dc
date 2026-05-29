@@ -19,11 +19,10 @@ package zigbee2mqtt
 import (
 	"encoding/json"
 	"errors"
+	"strings"
+
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/model"
 	paho "github.com/eclipse/paho.mqtt.golang"
-	"log"
-	"runtime/debug"
-	"strings"
 )
 
 func (this *Client) startEventListener() error {
@@ -47,8 +46,7 @@ func (this *Client) eventHandler(client paho.Client, message paho.Message) {
 		return
 	}
 	if err != nil {
-		log.Println("ERROR:", err)
-		debug.PrintStack()
+		this.config.GetLogger().Error("unable to get friendly device name", "deviceName", deviceName, "error", err)
 		return
 	}
 	this.valueMux.Lock()

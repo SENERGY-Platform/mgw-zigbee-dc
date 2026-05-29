@@ -18,20 +18,20 @@ package connector
 
 import (
 	"context"
-	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/mgw"
-	"log"
 	"sync"
+
+	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/mgw"
 )
 
 func (this *Connector) startCommandHandling(ctx context.Context, wg *sync.WaitGroup) error {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		log.Println("start command handling")
+		this.config.GetLogger().Info("start command handling")
 		for {
 			select {
 			case <-ctx.Done():
-				log.Println("stop command handling")
+				this.config.GetLogger().Info("stop command handling")
 				return
 			case command := <-this.commandbuffer:
 				this.handleCommand(command)
@@ -58,7 +58,7 @@ func (this *Connector) handleCommand(command CommandDesc) {
 			Data:      "",
 		})
 		if err != nil {
-			log.Println("ERROR: unable to send empty response", err)
+			this.config.GetLogger().Error("unable to send empty response", "error", err)
 			this.mgw.SendCommandError(command.Command.CommandId, "unable to send empty response: "+err.Error())
 		}
 	case "get":
@@ -72,7 +72,7 @@ func (this *Connector) handleCommand(command CommandDesc) {
 			Data:      string(msg),
 		})
 		if err != nil {
-			log.Println("ERROR: unable to send get result", err)
+			this.config.GetLogger().Error("unable to send get result", "error", err)
 			this.mgw.SendCommandError(command.Command.CommandId, "unable to send get result: "+err.Error())
 		}
 	default:

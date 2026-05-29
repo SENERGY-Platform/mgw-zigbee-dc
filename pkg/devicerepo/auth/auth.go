@@ -19,12 +19,12 @@ package auth
 import (
 	"encoding/json"
 	"errors"
-	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/configuration"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/configuration"
 )
 
 type Auth struct {
@@ -48,20 +48,20 @@ func (openid *Auth) EnsureAccess(config configuration.Config) (token string, err
 	}
 
 	if openid.RefreshToken != "" && openid.RefreshExpiresIn-config.AuthExpirationTimeBuffer > duration {
-		log.Println("refresh token", openid.RefreshExpiresIn, duration)
+		config.GetLogger().Debug("refresh token", "expires_in", openid.RefreshExpiresIn, "duration", duration)
 		err = refreshOpenidToken(openid, config)
 		if err != nil {
-			log.Println("WARNING: unable to use refreshtoken", err)
+			config.GetLogger().Warn("unable to use refreshtoken", "error", err)
 		} else {
 			token = "Bearer " + openid.AccessToken
 			return
 		}
 	}
 
-	log.Println("get new access token")
+	config.GetLogger().Debug("get new access token")
 	err = getOpenidToken(openid, config)
 	if err != nil {
-		log.Println("ERROR: unable to get new access token", err)
+		config.GetLogger().Error("unable to get new access token", "error", err)
 		openid = &Auth{}
 	}
 	token = "Bearer " + openid.AccessToken
@@ -80,7 +80,7 @@ func getOpenidToken(token *Auth, config configuration.Config) (err error) {
 	resp, err := http.PostForm(config.AuthEndpoint+"/auth/realms/master/protocol/openid-connect/token", values)
 
 	if err != nil {
-		log.Println("ERROR: getOpenidToken::PostForm()", err)
+		config.GetLogger().Error("unable to get new access token", "error", err)
 		return err
 	}
 	if resp.StatusCode != http.StatusOK {

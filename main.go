@@ -19,13 +19,14 @@ package main
 import (
 	"context"
 	"flag"
-	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/configuration"
-	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/connector"
 	"log"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
+
+	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/configuration"
+	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/connector"
 )
 
 func main() {
@@ -42,6 +43,7 @@ func main() {
 
 	_, err = connector.Start(ctx, wg, config)
 	if err != nil {
+		config.GetLogger().Error("error during connector start", "error", err)
 		log.Fatal(err)
 	}
 
@@ -49,7 +51,7 @@ func main() {
 		shutdown := make(chan os.Signal, 1)
 		signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
 		sig := <-shutdown
-		log.Println("received shutdown signal", sig)
+		config.GetLogger().Info("received shutdown signal", "signal", sig)
 		cancel()
 	}()
 

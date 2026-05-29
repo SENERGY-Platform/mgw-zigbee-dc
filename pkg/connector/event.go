@@ -21,21 +21,22 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
+	"sync"
+
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/model"
 	"github.com/casbin/govaluate"
-	"log"
-	"sync"
 )
 
 func (this *Connector) startEventHandling(ctx context.Context, wg *sync.WaitGroup) error {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		log.Println("start event handling")
+		this.config.GetLogger().Info("start event handling")
 		for {
 			select {
 			case <-ctx.Done():
-				log.Println("stop event handling")
+				this.config.GetLogger().Info("stop event handling")
 				return
 			case event := <-this.eventbuffer:
 				this.handleEvent(event)
@@ -50,13 +51,13 @@ func (this *Connector) handleEvent(event EventDesc) {
 		deviceid := this.getDeviceId(event.Device)
 		serviceIds, err := this.getServiceIds(event)
 		if err != nil {
-			log.Println("ERROR: unable to get event service id", err)
+			this.config.GetLogger().Error("unable to get event service id", "error", err)
 			this.mgw.SendDeviceError(deviceid, "unable to get event service id: "+err.Error())
 		}
 		for _, serviceId := range serviceIds {
 			err = this.mgw.SendEvent(deviceid, serviceId, event.Payload)
 			if err != nil {
-				log.Println("ERROR: unable to send event to mgw", err)
+				this.config.GetLogger().Error("unable to send event to mgw", "error", err)
 				this.mgw.SendDeviceError(deviceid, "unable to send event to mgw: "+err.Error())
 			}
 		}
@@ -101,7 +102,7 @@ func checkServiceAttrCondition(service model.Service, value interface{}) (ok boo
 		if attr.Key == MgwZigbeeServiceSelectionConditionAttrKey {
 			ok, err = evalServiceSelectionCondition(attr.Value, value)
 			if err != nil {
-				log.Printf("WARNING: unable to check service condition script=%#v value=%#v err=%#v", attr.Value, value, err.Error())
+				slog.Warn("unable to check service condition", "script", attr.Value, "value", value, "error", err.Error())
 				return false, nil
 			}
 			return ok, nil

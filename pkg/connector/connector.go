@@ -18,8 +18,6 @@ package connector
 
 import (
 	"context"
-	"log"
-	"runtime/debug"
 	"sync"
 
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/configuration"
@@ -129,8 +127,7 @@ func (this *Connector) DeviceInfoUpdate(devices []model.ZigbeeDeviceInfo) {
 func (this *Connector) NotifyRefresh() {
 	devices, err := this.zigbee.GetDeviceList(nil)
 	if err != nil {
-		log.Println("ERROR:", err)
-		debug.PrintStack()
+		this.config.GetLogger().Error("unable to get device list", "error", err)
 		return
 	}
 	this.DeviceInfoUpdate(devices)

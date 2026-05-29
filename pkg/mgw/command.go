@@ -19,29 +19,28 @@ package mgw
 import (
 	"encoding/json"
 	"errors"
-	paho "github.com/eclipse/paho.mqtt.golang"
-	"log"
+	"log/slog"
 	"strings"
+
+	paho "github.com/eclipse/paho.mqtt.golang"
 )
 
 func (this *Client) ListenToDeviceCommands(deviceId string, commandHandler DeviceCommandHandler) error {
 	if !this.mqtt.IsConnected() {
-		log.Println("WARNING: mqtt client not connected")
+		slog.Warn("mqtt client not connected")
 		return errors.New("mqtt client not connected")
 	}
 	topic := "command/" + deviceId + "/+"
 
 	handler := func(client paho.Client, message paho.Message) {
-		if this.debug {
-			log.Println("get command: \n", string(message.Payload()))
-		}
+		slog.Debug("received command", "topic", message.Topic(), "payload", string(message.Payload()))
 		parts := strings.Split(message.Topic(), "/")
 		serviceId := parts[len(parts)-1]
 
 		command := Command{}
 		err := json.Unmarshal(message.Payload(), &command)
 		if err != nil {
-			log.Println("ERROR: unable to unmarshal command", err)
+			slog.Error("unable to unmarshal command", "error", err)
 			this.SendClientError("unable to unmarshal command: " + err.Error())
 			return
 		}
@@ -50,7 +49,7 @@ func (this *Client) ListenToDeviceCommands(deviceId string, commandHandler Devic
 
 	token := this.mqtt.Subscribe(topic, 2, handler)
 	if token.Wait() && token.Error() != nil {
-		log.Println("Error on Subscribe: ", topic, token.Error())
+		slog.Error("Error on Subscribe", "topic", topic, "error", token.Error())
 		return token.Error()
 	}
 
@@ -60,15 +59,13 @@ func (this *Client) ListenToDeviceCommands(deviceId string, commandHandler Devic
 
 func (this *Client) ListenToCommands(commandHandler DeviceCommandHandler) error {
 	if !this.mqtt.IsConnected() {
-		log.Println("WARNING: mqtt client not connected")
+		slog.Warn("mqtt client not connected")
 		return errors.New("mqtt client not connected")
 	}
 	topic := "command/+/+"
 
 	handler := func(client paho.Client, message paho.Message) {
-		if this.debug {
-			log.Println("get command: \n", string(message.Payload()))
-		}
+		slog.Debug("received command", "topic", message.Topic(), "payload", string(message.Payload()))
 		parts := strings.Split(message.Topic(), "/")
 		deviceId := strings.Join(parts[1:len(parts)-1], "/")
 		serviceId := parts[len(parts)-1]
@@ -76,7 +73,7 @@ func (this *Client) ListenToCommands(commandHandler DeviceCommandHandler) error 
 		command := Command{}
 		err := json.Unmarshal(message.Payload(), &command)
 		if err != nil {
-			log.Println("ERROR: unable to unmarshal command", err)
+			slog.Error("unable to unmarshal command", "error", err)
 			this.SendClientError("unable to unmarshal command: " + err.Error())
 			return
 		}
@@ -85,7 +82,7 @@ func (this *Client) ListenToCommands(commandHandler DeviceCommandHandler) error 
 
 	token := this.mqtt.Subscribe(topic, 2, handler)
 	if token.Wait() && token.Error() != nil {
-		log.Println("Error on Subscribe: ", topic, token.Error())
+		slog.Error("Error on Subscribe", "topic", topic, "error", token.Error())
 		return token.Error()
 	}
 
@@ -95,13 +92,13 @@ func (this *Client) ListenToCommands(commandHandler DeviceCommandHandler) error 
 
 func (this *Client) StopListenToDeviceCommands(deviceId string) error {
 	if !this.mqtt.IsConnected() {
-		log.Println("WARNING: mqtt client not connected")
+		slog.Warn("mqtt client not connected")
 		return errors.New("mqtt client not connected")
 	}
 	topic := "command/" + deviceId + "/+"
 	token := this.mqtt.Unsubscribe(topic)
 	if token.Wait() && token.Error() != nil {
-		log.Println("Error on Unsubscribe: ", topic, token.Error())
+		slog.Error("Error on Unsubscribe", "topic", topic, "error", token.Error())
 		return token.Error()
 	}
 	this.unregisterSubscriptions(topic)
