@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/SENERGY-Platform/device-repository/lib/client"
+	"github.com/SENERGY-Platform/device-repository/v3/lib/client"
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/model"
 )
 
