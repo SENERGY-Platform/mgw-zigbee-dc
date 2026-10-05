@@ -25,24 +25,21 @@ import (
 
 	"github.com/SENERGY-Platform/device-repository/v3/lib/client"
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/configuration"
-	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/devicerepo/fallback"
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/model"
 	"github.com/SENERGY-Platform/models/go/models"
 )
 
 type DeviceRepo struct {
-	config                    configuration.Config
-	auth                      Auth
-	fallback                  fallback.Fallback
-	deviceTypes               []model.DeviceType
-	minCacheDuration          time.Duration
-	maxCacheDuration          time.Duration
-	lastDtRefresh             time.Time
-	lastDtRefreshUsedFallback bool
-	dtMux                     sync.Mutex
-	createdDt                 map[string]models.DeviceType
-	repoclient                client.Interface
-	deviceDeviceTypeIdCache   map[string]string
+	config                  configuration.Config
+	auth                    Auth
+	deviceTypes             []model.DeviceType
+	minCacheDuration        time.Duration
+	maxCacheDuration        time.Duration
+	lastDtRefresh           time.Time
+	dtMux                   sync.Mutex
+	createdDt               map[string]models.DeviceType
+	repoclient              client.Interface
+	deviceDeviceTypeIdCache map[string]string
 }
 
 type Auth interface {
@@ -50,17 +47,13 @@ type Auth interface {
 }
 
 func New(config configuration.Config, auth Auth) (*DeviceRepo, error) {
-	f, err := fallback.NewFallback(config.FallbackFile)
-	if err != nil {
-		return nil, err
-	}
 	repoclient := client.NewClient(config.DeviceRepositoryUrl, func() (token string, err error) {
 		return auth.EnsureAccess(config)
 	})
-	return NewWithDependencies(config, auth, repoclient, f)
+	return NewWithDependencies(config, auth, repoclient)
 }
 
-func NewWithDependencies(config configuration.Config, auth Auth, repoclient client.Interface, f fallback.Fallback) (*DeviceRepo, error) {
+func NewWithDependencies(config configuration.Config, auth Auth, repoclient client.Interface) (*DeviceRepo, error) {
 	minCacheDuration, err := time.ParseDuration(config.MinCacheDuration)
 	if err != nil {
 		return nil, err
@@ -72,7 +65,6 @@ func NewWithDependencies(config configuration.Config, auth Auth, repoclient clie
 	return &DeviceRepo{
 		auth:                    auth,
 		config:                  config,
-		fallback:                f,
 		repoclient:              repoclient,
 		minCacheDuration:        minCacheDuration,
 		maxCacheDuration:        maxCacheDuration,
@@ -104,76 +96,67 @@ func (this *DeviceRepo) getDeviceFromRepo(deviceId string) (device models.Device
 	return device, true, nil
 }
 
-func (this *DeviceRepo) GetKnownDeviceDeviceTypeId(deviceId string) (dtId string, known bool, usedFallback bool, err error) {
+func (this *DeviceRepo) GetKnownDeviceDeviceTypeId(deviceId string) (dtId string, known bool, err error) {
 	dtId, known = this.deviceDeviceTypeIdCache[deviceId]
 	if known {
-		return dtId, true, false, nil
+		return dtId, true, nil
 	}
 	device, known, err := this.getDeviceFromRepo(deviceId)
 	if err != nil {
-		dtIdObj, err := this.fallback.Get("device.device_id." + deviceId)
-		if err != nil {
-			return "", false, true, nil
-		}
-		dtId, known = dtIdObj.(string)
-		if !known {
-			return "", false, true, fmt.Errorf("fallback value for device.device_id.%s is not a string", deviceId)
-		}
-		return dtId, true, true, nil
+		return "", false, err
 	}
 	if !known {
-		return "", false, false, nil
+		return "", false, nil
 	}
 	dtId = device.DeviceTypeId
 	this.deviceDeviceTypeIdCache[deviceId] = dtId
-	_ = this.fallback.Set("device.device_id."+deviceId, dtId)
-	return dtId, true, false, nil
+	return dtId, true, nil
 }
 
-func (this *DeviceRepo) FindDeviceTypeId(device model.ZigbeeDeviceInfo) (dtId string, usedFallback bool, err error) {
+func (this *DeviceRepo) FindDeviceTypeId(device model.ZigbeeDeviceInfo) (dtId string, err error) {
 	deviceTypes, err := this.ListZigbeeDeviceTypes()
 	if err != nil {
-		return "", this.getLastDtRefreshUsedFallback(), err
+		return "", err
 	}
 	deviceType, ok := getMatchingDeviceType(deviceTypes, device)
 	if !ok && time.Since(this.lastDtRefresh) > this.minCacheDuration {
 		err = this.refreshDeviceTypeList()
 		if err != nil {
-			return "", this.getLastDtRefreshUsedFallback(), err
+			return "", err
 		}
 		deviceTypes, err = this.ListZigbeeDeviceTypes()
 		if err != nil {
-			return "", this.getLastDtRefreshUsedFallback(), err
+			return "", err
 		}
 		deviceType, ok = getMatchingDeviceType(deviceTypes, device)
 	}
 	if !ok {
-		return "", this.getLastDtRefreshUsedFallback(), fmt.Errorf("%w: vendor=%v model=%v", model.NoMatchingDeviceTypeFound, device.Definition.Vendor, device.Definition.Model)
+		return "", fmt.Errorf("%w: vendor=%v model=%v", model.NoMatchingDeviceTypeFound, device.Definition.Vendor, device.Definition.Model)
 	}
-	return deviceType.Id, this.getLastDtRefreshUsedFallback(), nil
+	return deviceType.Id, nil
 }
 
-func (this *DeviceRepo) FindDeviceType(device model.ZigbeeDeviceInfo) (dt model.DeviceType, usedFallback bool, err error) {
+func (this *DeviceRepo) FindDeviceType(device model.ZigbeeDeviceInfo) (dt model.DeviceType, err error) {
 	deviceTypes, err := this.ListZigbeeDeviceTypes()
 	if err != nil {
-		return dt, this.getLastDtRefreshUsedFallback(), err
+		return dt, err
 	}
 	deviceType, ok := getMatchingDeviceType(deviceTypes, device)
 	if !ok && time.Since(this.lastDtRefresh) > this.minCacheDuration {
 		err = this.refreshDeviceTypeList()
 		if err != nil {
-			return dt, this.getLastDtRefreshUsedFallback(), err
+			return dt, err
 		}
 		deviceTypes, err = this.ListZigbeeDeviceTypes()
 		if err != nil {
-			return dt, this.getLastDtRefreshUsedFallback(), err
+			return dt, err
 		}
 		deviceType, ok = getMatchingDeviceType(deviceTypes, device)
 	}
 	if !ok {
-		return dt, this.getLastDtRefreshUsedFallback(), fmt.Errorf("%w: vendor=%v model=%v", model.NoMatchingDeviceTypeFound, device.Definition.Vendor, device.Definition.Model)
+		return dt, fmt.Errorf("%w: vendor=%v model=%v", model.NoMatchingDeviceTypeFound, device.Definition.Vendor, device.Definition.Model)
 	}
-	return deviceType, this.getLastDtRefreshUsedFallback(), nil
+	return deviceType, nil
 }
 
 const AttributeZigbeeVendor = "senergy/zigbee-vendor"

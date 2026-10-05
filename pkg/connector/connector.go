@@ -107,10 +107,10 @@ type CommandDesc struct {
 }
 
 type DeviceRepo interface {
-	FindDeviceType(device model.ZigbeeDeviceInfo) (dt model.DeviceType, usedFallback bool, err error)
-	FindDeviceTypeId(device model.ZigbeeDeviceInfo) (dtId string, usedFallback bool, err error)
+	FindDeviceType(device model.ZigbeeDeviceInfo) (dt model.DeviceType, err error)
+	FindDeviceTypeId(device model.ZigbeeDeviceInfo) (dtId string, err error)
 	CreateDeviceTypeWithDistinctAttributes(dt models.DeviceType, attributeKeys []string) (result models.DeviceType, code int, err error)
-	GetKnownDeviceDeviceTypeId(deviceId string) (dtId string, known bool, usedFallback bool, err error)
+	GetKnownDeviceDeviceTypeId(deviceId string) (dtId string, known bool, err error)
 }
 
 func (this *Connector) Event(device model.ZigbeeDeviceInfo, payload []byte) {

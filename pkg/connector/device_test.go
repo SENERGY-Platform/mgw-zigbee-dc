@@ -24,7 +24,6 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"path/filepath"
 	"reflect"
 	"sort"
 	"strings"
@@ -119,8 +118,6 @@ func TestDeviceTypeCreation(t *testing.T) {
 
 	config.MinCacheDuration = "100ms"
 	config.MaxCacheDuration = "200ms"
-
-	config.FallbackFile = filepath.Join(t.TempDir(), "fallback.json")
 
 	config.DeviceRepositoryUrl, _, err = docker.DeviceManagerWithDependencies(ctx, wg)
 	if err != nil {
@@ -235,9 +232,6 @@ func TestDeviceTypeCreation(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		if result.UsedFallback {
-			t.Error("fallback was true")
-		}
 		if result.NewDeviceType == "" {
 			t.Error("NewDeviceType was empty")
 		}
@@ -246,14 +240,9 @@ func TestDeviceTypeCreation(t *testing.T) {
 	dtId := ""
 	t.Run("check device repo", func(t *testing.T) {
 		time.Sleep(2 * time.Second)
-		var usedFallback bool
-		dtId, usedFallback, err = c.devicerepo.FindDeviceTypeId(resources.DeviceInfoExample[1])
+		dtId, err = c.devicerepo.FindDeviceTypeId(resources.DeviceInfoExample[1])
 		if err != nil {
 			t.Error(err)
-			return
-		}
-		if usedFallback {
-			t.Error(usedFallback)
 			return
 		}
 		req, err := http.NewRequest(http.MethodGet, config.DeviceRepositoryUrl+"/device-types/"+url.PathEscape(dtId), buf)
@@ -487,9 +476,6 @@ func TestDeviceTypeCreation(t *testing.T) {
 		if result.Err != nil {
 			t.Error(err)
 			return
-		}
-		if result.UsedFallback {
-			t.Error("fallback was true")
 		}
 		if result.NewDeviceType != "" {
 			t.Error("NewDeviceType was not empty")

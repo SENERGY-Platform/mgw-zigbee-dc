@@ -17,9 +17,6 @@
 package devicerepo
 
 import (
-	"encoding/json"
-	"errors"
-	"fmt"
 	"time"
 
 	"github.com/SENERGY-Platform/device-repository/v3/lib/client"
@@ -27,11 +24,10 @@ import (
 )
 
 const AttributeUsedForZigbee = "senergy/zigbee-dc"
-const DtFallbackKey = "device-types"
 
 func (this *DeviceRepo) ListZigbeeDeviceTypes() (list []model.DeviceType, err error) {
 	age := time.Since(this.lastDtRefresh)
-	if (this.lastDtRefreshUsedFallback && age > this.minCacheDuration) || age > this.maxCacheDuration {
+	if age > this.maxCacheDuration {
 		err = this.refreshDeviceTypeList()
 		if err != nil {
 			return nil, err
@@ -40,36 +36,17 @@ func (this *DeviceRepo) ListZigbeeDeviceTypes() (list []model.DeviceType, err er
 	return this.getDeviceTypeList(), nil
 }
 
-func (this *DeviceRepo) getLastDtRefreshUsedFallback() bool {
-	this.dtMux.Lock()
-	defer this.dtMux.Unlock()
-	return this.lastDtRefreshUsedFallback
-}
-
 func (this *DeviceRepo) refreshDeviceTypeList() error {
 	this.dtMux.Lock()
 	defer this.dtMux.Unlock()
 	result, err := this.getDeviceTypeListFromPlatform()
-	if err == nil {
-		this.deviceTypes = result
-		this.lastDtRefresh = time.Now()
-		this.lastDtRefreshUsedFallback = false
-		err = this.fallback.Set(DtFallbackKey, this.deviceTypes)
-		if err != nil {
-			this.config.GetLogger().Error("unable to store device-types in fallback file", "error", err)
-		}
-		return nil
-	} else {
-		this.config.GetLogger().Warn("unable to load device-types from platform --> use fallback file to load device type list", "error", err)
-		result, err = this.getDeviceTypeListFromFallback()
-		if err != nil {
-			return err
-		}
-		this.deviceTypes = result
-		this.lastDtRefresh = time.Now()
-		this.lastDtRefreshUsedFallback = true
-		return nil
+	if err != nil {
+		this.config.GetLogger().Warn("unable to load device-types from platform", "error", err)
+		return err
 	}
+	this.deviceTypes = result
+	this.lastDtRefresh = time.Now()
+	return nil
 }
 
 func (this *DeviceRepo) getDeviceTypeListFromPlatform() (result []model.DeviceType, err error) {
@@ -105,35 +82,6 @@ func (this *DeviceRepo) getDeviceTypeListFromPlatform() (result []model.DeviceTy
 		})
 	}
 	return result, nil
-}
-
-func (this *DeviceRepo) getDeviceTypeListFromFallback() (result []model.DeviceType, err error) {
-	value, fallbackerr := this.fallback.Get(DtFallbackKey)
-	if fallbackerr != nil {
-		this.config.GetLogger().Error("unable to load fallback", "error", fallbackerr)
-		return result, errors.Join(err, fallbackerr)
-	}
-	var ok bool
-	result, ok = value.([]model.DeviceType)
-	if !ok {
-		err = jsonCast(value, &result)
-		if err != nil {
-			this.config.GetLogger().Error("fallback file does not contain expected format", "error", err)
-			err = fmt.Errorf("fallback file does not contain expected format: %w", err)
-			return result, err
-		}
-		this.fallback.Set(DtFallbackKey, result)
-	}
-	return result, nil
-}
-
-func jsonCast(in interface{}, out interface{}) error {
-	temp, err := json.Marshal(in)
-	if err != nil {
-		return err
-	}
-	err = json.Unmarshal(temp, out)
-	return err
 }
 
 func (this *DeviceRepo) getDeviceTypeList() []model.DeviceType {

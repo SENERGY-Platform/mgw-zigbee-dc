@@ -24,7 +24,6 @@
     "auth_expiration_time_buffer": 2,
     "auth_username": "",
     "auth_password": "",
-    "fallback_file": "devicerepo_fallback.json",
     "device_repository_url": "https://api.senergy.infai.org/device-repository",
     "min_cache_duration": "1m",
     "max_cache_duration": "1h",

@@ -69,7 +69,7 @@ func (this *Connector) eventIsAllowed(event EventDesc) bool {
 }
 
 func (this *Connector) getServiceIds(event EventDesc) ([]string, error) {
-	dt, _, err := this.devicerepo.FindDeviceType(event.Device)
+	dt, err := this.devicerepo.FindDeviceType(event.Device)
 	if err != nil {
 		return nil, err
 	}

@@ -55,7 +55,6 @@ func (this *Connector) startDeviceHandling(ctx context.Context, wg *sync.WaitGro
 
 type DeviceInfoUpdateResult struct {
 	NewDeviceType string
-	UsedFallback  bool
 	Err           error
 }
 
@@ -69,39 +68,32 @@ func (this *DeviceInfoUpdateResult) WithNewDeviceType(newDeviceType string) *Dev
 	return this
 }
 
-func (this *DeviceInfoUpdateResult) WithUsedFallback(usedFallback bool) *DeviceInfoUpdateResult {
-	this.UsedFallback = usedFallback
-	return this
-}
-
 func (this *Connector) handleDeviceInfoUpdate(device model.ZigbeeDeviceInfo) *DeviceInfoUpdateResult {
 	result := &DeviceInfoUpdateResult{}
 	if isValidDevice(device) {
 		deviceId := this.getDeviceId(device)
 		deviceName := this.getDeviceName(device)
-		deviceTypeId, usedFallback, err := this.getDeviceTypeId(device)
+		deviceTypeId, err := this.getDeviceTypeId(device)
 		if errors.Is(err, model.NoMatchingDeviceTypeFound) {
 			this.config.GetLogger().Warn("unable to find matching device type", "deviceIeeeAddress", device.IeeeAddress, "error", err)
-			if !usedFallback {
-				if this.config.CreateMissingDeviceTypes {
-					this.config.GetLogger().Info("create device type", "deviceIeeeAddress", device.IeeeAddress, "error", err)
-					deviceTypeId, err = this.createDeviceType(device)
-					result.WithNewDeviceType(deviceTypeId)
-					if err != nil {
-						this.config.GetLogger().Error("unable to create device type", "error", err)
-						return result.WithErr(err).WithUsedFallback(usedFallback)
-					}
-					//if no error: continue with mgw device state publish
-				} else {
-					missingDtMsg := this.getMissingDeviceTypeMessage(device)
-					this.mgw.SendClientError(missingDtMsg)
-					return result.WithErr(err).WithUsedFallback(usedFallback)
+			if this.config.CreateMissingDeviceTypes {
+				this.config.GetLogger().Info("create device type", "deviceIeeeAddress", device.IeeeAddress, "error", err)
+				deviceTypeId, err = this.createDeviceType(device)
+				result.WithNewDeviceType(deviceTypeId)
+				if err != nil {
+					this.config.GetLogger().Error("unable to create device type", "error", err)
+					return result.WithErr(err)
 				}
+				//if no error: continue with mgw device state publish
+			} else {
+				missingDtMsg := this.getMissingDeviceTypeMessage(device)
+				this.mgw.SendClientError(missingDtMsg)
+				return result.WithErr(err)
 			}
 		} else if err != nil {
 			this.config.GetLogger().Error("unable to get device type", "deviceIeeeAddress", device.IeeeAddress, "error", err)
 			debug.PrintStack()
-			return result.WithErr(err).WithUsedFallback(usedFallback)
+			return result.WithErr(err)
 		}
 		deviceState := this.getDeviceState(device)
 		this.storeDeviceState(device.IeeeAddress, deviceState)
@@ -112,7 +104,7 @@ func (this *Connector) handleDeviceInfoUpdate(device model.ZigbeeDeviceInfo) *De
 		})
 		if err != nil {
 			this.config.GetLogger().Error("unable to set device", "deviceIeeeAddress", device.IeeeAddress, "error", err)
-			return result.WithErr(err).WithUsedFallback(usedFallback)
+			return result.WithErr(err)
 		}
 	}
 	return result
@@ -178,14 +170,14 @@ func (this *Connector) getDeviceState(device model.ZigbeeDeviceInfo) mgw.State {
 	}
 }
 
-func (this *Connector) getDeviceTypeId(device model.ZigbeeDeviceInfo) (dtId string, usedFallback bool, err error) {
+func (this *Connector) getDeviceTypeId(device model.ZigbeeDeviceInfo) (dtId string, err error) {
 	var known bool
-	dtId, known, usedFallback, err = this.devicerepo.GetKnownDeviceDeviceTypeId(this.getDeviceId(device))
+	dtId, known, err = this.devicerepo.GetKnownDeviceDeviceTypeId(this.getDeviceId(device))
 	if err != nil {
-		return "", usedFallback, err
+		return "", err
 	}
 	if known {
-		return dtId, usedFallback, nil
+		return dtId, nil
 	}
 	return this.devicerepo.FindDeviceTypeId(device)
 }

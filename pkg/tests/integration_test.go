@@ -23,7 +23,6 @@ import (
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/configuration"
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/connector"
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/devicerepo"
-	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/devicerepo/fallback"
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/mgw"
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/tests/docker"
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/tests/mocks"
@@ -32,24 +31,15 @@ import (
 	"github.com/SENERGY-Platform/models/go/models"
 	paho "github.com/eclipse/paho.mqtt.golang"
 	"log"
-	"path/filepath"
 	"reflect"
 	"sync"
 	"testing"
 	"time"
 )
 
-func TestIntegration(t *testing.T) {
-	fallbackFile := filepath.Join(t.TempDir(), "fallback.json")
-	t.Run("initial", func(t *testing.T) {
-		testIntegrationWithWorkingPermSearch(t, fallbackFile)
-	})
-	t.Run("fallback", func(t *testing.T) {
-		testIntegrationWithFallbackUse(t, fallbackFile)
-	})
-}
+const testtoken = `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIwOGM0N2E4OC0yYzc5LTQyMGYtODEwNC02NWJkOWViYmU0MWUiLCJleHAiOjE1NDY1MDcyMzMsIm5iZiI6MCwiaWF0IjoxNTQ2NTA3MTczLCJpc3MiOiJodHRwOi8vbG9jYWxob3N0OjgwMDEvYXV0aC9yZWFsbXMvbWFzdGVyIiwiYXVkIjoiZnJvbnRlbmQiLCJzdWIiOiJ0ZXN0T3duZXIiLCJ0eXAiOiJCZWFyZXIiLCJhenAiOiJmcm9udGVuZCIsIm5vbmNlIjoiOTJjNDNjOTUtNzViMC00NmNmLTgwYWUtNDVkZDk3M2I0YjdmIiwiYXV0aF90aW1lIjoxNTQ2NTA3MDA5LCJzZXNzaW9uX3N0YXRlIjoiNWRmOTI4ZjQtMDhmMC00ZWI5LTliNjAtM2EwYWUyMmVmYzczIiwiYWNyIjoiMCIsImFsbG93ZWQtb3JpZ2lucyI6WyIqIl0sInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJ1c2VyIl19LCJyZXNvdXJjZV9hY2Nlc3MiOnsibWFzdGVyLXJlYWxtIjp7InJvbGVzIjpbInZpZXctcmVhbG0iLCJ2aWV3LWlkZW50aXR5LXByb3ZpZGVycyIsIm1hbmFnZS1pZGVudGl0eS1wcm92aWRlcnMiLCJpbXBlcnNvbmF0aW9uIiwiY3JlYXRlLWNsaWVudCIsIm1hbmFnZS11c2VycyIsInF1ZXJ5LXJlYWxtcyIsInZpZXctYXV0aG9yaXphdGlvbiIsInF1ZXJ5LWNsaWVudHMiLCJxdWVyeS11c2VycyIsIm1hbmFnZS1ldmVudHMiLCJtYW5hZ2UtcmVhbG0iLCJ2aWV3LWV2ZW50cyIsInZpZXctdXNlcnMiLCJ2aWV3LWNsaWVudHMiLCJtYW5hZ2UtYXV0aG9yaXphdGlvbiIsIm1hbmFnZS1jbGllbnRzIiwicXVlcnktZ3JvdXBzIl19LCJhY2NvdW50Ijp7InJvbGVzIjpbIm1hbmFnZS1hY2NvdW50IiwibWFuYWdlLWFjY291bnQtbGlua3MiLCJ2aWV3LXByb2ZpbGUiXX19LCJyb2xlcyI6WyJ1c2VyIl19.ykpuOmlpzj75ecSI6cHbCATIeY4qpyut2hMc1a67Ycg`
 
-func testIntegrationWithWorkingPermSearch(t *testing.T, fallbackFile string) {
+func TestIntegration(t *testing.T) {
 	wg := &sync.WaitGroup{}
 	defer wg.Wait()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -62,10 +52,10 @@ func testIntegrationWithWorkingPermSearch(t *testing.T, fallbackFile string) {
 	}
 
 	config.CreateMissingDeviceTypes = false
+	config.AuthEndpoint = "will be ignored by auth mock"
 
 	config.MinCacheDuration = "200ms"
 	config.MaxCacheDuration = "1s"
-	config.FallbackFile = fallbackFile
 
 	mqttPort, _, err := docker.Mqtt(ctx, wg)
 	if err != nil {
@@ -142,12 +132,7 @@ func testIntegrationWithWorkingPermSearch(t *testing.T, fallbackFile string) {
 		return
 	}
 
-	f, err := fallback.NewFallback(config.FallbackFile)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	deviceRepo, err := devicerepo.NewWithDependencies(config, mocks.Auth("testtoken"), repoclient, f)
+	deviceRepo, err := devicerepo.NewWithDependencies(config, mocks.Auth(testtoken), repoclient)
 	if err != nil {
 		t.Error(err)
 		return
@@ -503,362 +488,6 @@ func testIntegrationWithWorkingPermSearch(t *testing.T, fallbackFile string) {
 			expectedJson, _ := json.Marshal(expected)
 			t.Log(string(actualJson))
 			t.Log(string(expectedJson))
-		}
-	})
-}
-
-func testIntegrationWithFallbackUse(t *testing.T, fallbackFile string) {
-	wg := &sync.WaitGroup{}
-	defer wg.Wait()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	config, err := configuration.Load("../../config.json")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	config.MinCacheDuration = "200ms"
-	config.MaxCacheDuration = "1s"
-	config.FallbackFile = fallbackFile
-
-	config.CreateMissingDeviceTypes = false
-
-	mqttPort, _, err := docker.Mqtt(ctx, wg)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	config.MgwMqttBroker = "tcp://localhost:" + mqttPort
-	config.ZigbeeMqttBroker = "tcp://localhost:" + mqttPort
-
-	options := paho.NewClientOptions().
-		SetAutoReconnect(true).
-		SetCleanSession(true).
-		SetClientID("test-watcher").
-		AddBroker(config.ZigbeeMqttBroker).
-		SetWriteTimeout(10 * time.Second).
-		SetOrderMatters(false).
-		SetConnectionLostHandler(func(_ paho.Client, err error) {
-			log.Println("connection to test watcher broker lost")
-		}).
-		SetOnConnectHandler(func(_ paho.Client) {
-			log.Println("connected to test watcher broker")
-		})
-
-	testwatcher := paho.NewClient(options)
-	if token := testwatcher.Connect(); token.Wait() && token.Error() != nil {
-		t.Error(token.Error())
-		return
-	}
-
-	mqttMessages := map[string][]string{}
-	testwatchermux := sync.Mutex{}
-	testwatcher.Subscribe("#", 2, func(client paho.Client, message paho.Message) {
-		testwatchermux.Lock()
-		defer testwatchermux.Unlock()
-		mqttMessages[message.Topic()] = append(mqttMessages[message.Topic()], string(message.Payload()))
-	})
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		<-ctx.Done()
-		testwatcher.Disconnect(200)
-	}()
-
-	zigbeemock, err := mocks.NewZigbeeMock(ctx, wg, config)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	deviceId := "Hue Ingo"
-	zigbeemock.SendDeviceInfos(resources.DeviceInfoExample)
-	zigbeemock.TriggerEvent(deviceId, map[string]interface{}{
-		"brightness": 254,
-		"color": map[string]interface{}{
-			"hue":        42,
-			"saturation": 42,
-			"x":          42,
-			"y":          42,
-		},
-		"color_temp":         500,
-		"color_temp_startup": 500,
-		"linkquality":        255,
-		"power_on_behavior":  "off",
-		"state":              "ON",
-	})
-
-	time.Sleep(200 * time.Millisecond)
-
-	repoclient := client.NewClient("nope", func() (token string, err error) {
-		return mocks.Auth("testtoken").EnsureAccess(config)
-	})
-
-	f, err := fallback.NewFallback(config.FallbackFile)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	deviceRepo, err := devicerepo.NewWithDependencies(config, mocks.Auth("testtoken"), repoclient, f)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	_, err = connector.StartWithDependencies(ctx, wg, config, connector.MgwFactoryCast(mgw.New), connector.ZigbeeFactoryCast(zigbee2mqtt.New), deviceRepo)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	getMessages := func() (result map[string][]string) {
-		testwatchermux.Lock()
-		defer testwatchermux.Unlock()
-		temp, _ := json.Marshal(mqttMessages)
-		json.Unmarshal(temp, &result)
-		return result
-	}
-
-	const expectedDtErrInfo = "mgw-zigbee-dc: missing zigbee device-type, please provide a device-type with:\nref: https://www.zigbee2mqtt.io/devices/9290012573A.html\nattributes:\n    - senergy/zigbee-dc = true\n    - senergy/zigbee-vendor = Philips\n    - senergy/zigbee-model = 9290012573A\nservices:\n---------------\nlocal-id: get\nprotocol: standard-connector\nexample output data:\n{\n    \"brightness\": 254,\n    \"color\": {\n        \"hue\": 42,\n        \"saturation\": 42,\n        \"x\": 42,\n        \"y\": 42\n    },\n    \"color_temp\": 500,\n    \"color_temp_startup\": 500,\n    \"linkquality\": 255,\n    \"power_on_behavior\": \"off\",\n    \"state\": \"ON\"\n}\n---------------\nlocal-id: set\nprotocol: standard-connector\nexample input data:\n{\n    \"brightness\": 254,\n    \"color\": {\n        \"hue\": 42,\n        \"saturation\": 42,\n        \"x\": 42,\n        \"y\": 42\n    },\n    \"color_temp\": 500,\n    \"color_temp_startup\": 500,\n    \"effect\": \"blink\",\n    \"power_on_behavior\": \"off\",\n    \"state\": \"ON\"\n}\n---------------\n"
-
-	temp, err := json.Marshal(resources.DeviceInfoExample)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	expectedDeviceInfoList := string(temp)
-
-	t.Run("after startup", func(t *testing.T) {
-		time.Sleep(2 * time.Second)
-		expected := map[string][]string{
-			"device-manager/device/mgw-zigbee-dc": {
-				"{\"method\":\"set\",\"device_id\":\"zigbee:0x00178801020a70e7\",\"data\":{\"name\":\"Hue Ingo\",\"state\":\"online\",\"device_type\":\"dt-id\"}}",
-				"{\"method\":\"set\",\"device_id\":\"zigbee:0x00178801020a70e7\",\"data\":{\"name\":\"Hue Ingo\",\"state\":\"online\",\"device_type\":\"dt-id\"}}",
-				"{\"method\":\"set\",\"device_id\":\"zigbee:0x00178801020a70e7\",\"data\":{\"name\":\"Hue Ingo\",\"state\":\"online\",\"device_type\":\"dt-id\"}}",
-			},
-			"zigbee2mqtt/Hue Ingo": {
-				"{\"brightness\":254,\"color\":{\"hue\":42,\"saturation\":42,\"x\":42,\"y\":42},\"color_temp\":500,\"color_temp_startup\":500,\"linkquality\":255,\"power_on_behavior\":\"off\",\"state\":\"ON\"}", //initial event send by mock, not consumed by connector
-				"{\"brightness\":254,\"color\":{\"hue\":42,\"saturation\":42,\"x\":42,\"y\":42},\"color_temp\":500,\"color_temp_startup\":500,\"linkquality\":255,\"power_on_behavior\":\"off\",\"state\":\"ON\"}", //zigbee2mqtt/Hue Ingo/get response
-			},
-			"zigbee2mqtt/Hue Ingo/get": {
-				"{\"brightness\":null,\"color\":null,\"color_temp\":null,\"color_temp_startup\":null,\"power_on_behavior\":null,\"state\":null}", //triggered by retained zigbee2mqtt/bridge/devices message consumption
-			},
-			"event/zigbee:0x00178801020a70e7/get": {
-				"{\"brightness\":254,\"color\":{\"hue\":42,\"saturation\":42,\"x\":42,\"y\":42},\"color_temp\":500,\"color_temp_startup\":500,\"linkquality\":255,\"power_on_behavior\":\"off\",\"state\":\"ON\"}",
-			},
-			"zigbee2mqtt/bridge/devices": {
-				expectedDeviceInfoList,
-			},
-		}
-
-		actual := getMessages()
-		if !reflect.DeepEqual(actual, expected) {
-			t.Errorf("\n%#v\n%#v\n", expected, actual)
-			actualJson, _ := json.Marshal(actual)
-			expectedJson, _ := json.Marshal(expected)
-			t.Log("\n", string(actualJson), "\n", string(expectedJson))
-		}
-	})
-
-	t.Run("refresh notify", func(t *testing.T) {
-		token := testwatcher.Publish("device-manager/refresh", 2, false, "")
-		token.Wait()
-		err = token.Error()
-		if err != nil {
-			t.Error(err)
-			return
-		}
-		time.Sleep(1 * time.Second)
-
-		expected := map[string][]string{
-			"device-manager/device/mgw-zigbee-dc": {
-				"{\"method\":\"set\",\"device_id\":\"zigbee:0x00178801020a70e7\",\"data\":{\"name\":\"Hue Ingo\",\"state\":\"online\",\"device_type\":\"dt-id\"}}",
-				"{\"method\":\"set\",\"device_id\":\"zigbee:0x00178801020a70e7\",\"data\":{\"name\":\"Hue Ingo\",\"state\":\"online\",\"device_type\":\"dt-id\"}}",
-				"{\"method\":\"set\",\"device_id\":\"zigbee:0x00178801020a70e7\",\"data\":{\"name\":\"Hue Ingo\",\"state\":\"online\",\"device_type\":\"dt-id\"}}",
-				"{\"method\":\"set\",\"device_id\":\"zigbee:0x00178801020a70e7\",\"data\":{\"name\":\"Hue Ingo\",\"state\":\"online\",\"device_type\":\"dt-id\"}}",
-			},
-			"zigbee2mqtt/Hue Ingo": {
-				"{\"brightness\":254,\"color\":{\"hue\":42,\"saturation\":42,\"x\":42,\"y\":42},\"color_temp\":500,\"color_temp_startup\":500,\"linkquality\":255,\"power_on_behavior\":\"off\",\"state\":\"ON\"}", //initial event send by mock, not consumed by connector
-				"{\"brightness\":254,\"color\":{\"hue\":42,\"saturation\":42,\"x\":42,\"y\":42},\"color_temp\":500,\"color_temp_startup\":500,\"linkquality\":255,\"power_on_behavior\":\"off\",\"state\":\"ON\"}", //zigbee2mqtt/Hue Ingo/get response
-			},
-			"zigbee2mqtt/Hue Ingo/get": {
-				"{\"brightness\":null,\"color\":null,\"color_temp\":null,\"color_temp_startup\":null,\"power_on_behavior\":null,\"state\":null}", //triggered by retained zigbee2mqtt/bridge/devices message consumption
-			},
-			"event/zigbee:0x00178801020a70e7/get": {
-				"{\"brightness\":254,\"color\":{\"hue\":42,\"saturation\":42,\"x\":42,\"y\":42},\"color_temp\":500,\"color_temp_startup\":500,\"linkquality\":255,\"power_on_behavior\":\"off\",\"state\":\"ON\"}",
-			},
-			"zigbee2mqtt/bridge/devices": {
-				expectedDeviceInfoList,
-			},
-			"device-manager/refresh": {
-				"",
-			},
-		}
-
-		actual := getMessages()
-		if !reflect.DeepEqual(actual, expected) {
-			t.Errorf("\n%#v\n%#v\n", expected, actual)
-			actualJson, _ := json.Marshal(actual)
-			expectedJson, _ := json.Marshal(expected)
-			t.Log("\n", string(actualJson), "\n", string(expectedJson))
-		}
-	})
-
-	t.Run("zigbee mock devices signal", func(t *testing.T) {
-		zigbeemock.SendDeviceInfos(resources.DeviceInfoExample)
-		time.Sleep(1 * time.Second)
-		expected := map[string][]string{
-			"device-manager/device/mgw-zigbee-dc": {
-				"{\"method\":\"set\",\"device_id\":\"zigbee:0x00178801020a70e7\",\"data\":{\"name\":\"Hue Ingo\",\"state\":\"online\",\"device_type\":\"dt-id\"}}",
-				"{\"method\":\"set\",\"device_id\":\"zigbee:0x00178801020a70e7\",\"data\":{\"name\":\"Hue Ingo\",\"state\":\"online\",\"device_type\":\"dt-id\"}}",
-				"{\"method\":\"set\",\"device_id\":\"zigbee:0x00178801020a70e7\",\"data\":{\"name\":\"Hue Ingo\",\"state\":\"online\",\"device_type\":\"dt-id\"}}",
-				"{\"method\":\"set\",\"device_id\":\"zigbee:0x00178801020a70e7\",\"data\":{\"name\":\"Hue Ingo\",\"state\":\"online\",\"device_type\":\"dt-id\"}}",
-				"{\"method\":\"set\",\"device_id\":\"zigbee:0x00178801020a70e7\",\"data\":{\"name\":\"Hue Ingo\",\"state\":\"online\",\"device_type\":\"dt-id\"}}",
-			},
-			"zigbee2mqtt/Hue Ingo": {
-				"{\"brightness\":254,\"color\":{\"hue\":42,\"saturation\":42,\"x\":42,\"y\":42},\"color_temp\":500,\"color_temp_startup\":500,\"linkquality\":255,\"power_on_behavior\":\"off\",\"state\":\"ON\"}", //initial event send by mock, not consumed by connector
-				"{\"brightness\":254,\"color\":{\"hue\":42,\"saturation\":42,\"x\":42,\"y\":42},\"color_temp\":500,\"color_temp_startup\":500,\"linkquality\":255,\"power_on_behavior\":\"off\",\"state\":\"ON\"}", //zigbee2mqtt/Hue Ingo/get response
-			},
-			"zigbee2mqtt/Hue Ingo/get": {
-				"{\"brightness\":null,\"color\":null,\"color_temp\":null,\"color_temp_startup\":null,\"power_on_behavior\":null,\"state\":null}", //triggered by retained zigbee2mqtt/bridge/devices message consumption
-			},
-			"event/zigbee:0x00178801020a70e7/get": {
-				"{\"brightness\":254,\"color\":{\"hue\":42,\"saturation\":42,\"x\":42,\"y\":42},\"color_temp\":500,\"color_temp_startup\":500,\"linkquality\":255,\"power_on_behavior\":\"off\",\"state\":\"ON\"}",
-			},
-			"zigbee2mqtt/bridge/devices": {
-				expectedDeviceInfoList,
-				expectedDeviceInfoList,
-			},
-			"device-manager/refresh": {
-				"",
-			},
-		}
-
-		actual := getMessages()
-		if !reflect.DeepEqual(actual, expected) {
-			t.Errorf("\n%#v\n%#v\n", expected, actual)
-			actualJson, _ := json.Marshal(actual)
-			expectedJson, _ := json.Marshal(expected)
-			t.Log("\n", string(actualJson), "\n", string(expectedJson))
-		}
-	})
-
-	t.Run("set", func(t *testing.T) {
-		token := testwatcher.Publish("command/zigbee:0x00178801020a70e7/set", 2, false, `{"command_id": "1", "data": "{\"brightness\": 100}"}`)
-		token.Wait()
-		err = token.Error()
-		if err != nil {
-			t.Error(err)
-			return
-		}
-		time.Sleep(2 * time.Second)
-
-		expected := map[string][]string{
-			"device-manager/device/mgw-zigbee-dc": {
-				"{\"method\":\"set\",\"device_id\":\"zigbee:0x00178801020a70e7\",\"data\":{\"name\":\"Hue Ingo\",\"state\":\"online\",\"device_type\":\"dt-id\"}}",
-				"{\"method\":\"set\",\"device_id\":\"zigbee:0x00178801020a70e7\",\"data\":{\"name\":\"Hue Ingo\",\"state\":\"online\",\"device_type\":\"dt-id\"}}",
-				"{\"method\":\"set\",\"device_id\":\"zigbee:0x00178801020a70e7\",\"data\":{\"name\":\"Hue Ingo\",\"state\":\"online\",\"device_type\":\"dt-id\"}}",
-				"{\"method\":\"set\",\"device_id\":\"zigbee:0x00178801020a70e7\",\"data\":{\"name\":\"Hue Ingo\",\"state\":\"online\",\"device_type\":\"dt-id\"}}",
-				"{\"method\":\"set\",\"device_id\":\"zigbee:0x00178801020a70e7\",\"data\":{\"name\":\"Hue Ingo\",\"state\":\"online\",\"device_type\":\"dt-id\"}}",
-			},
-			"zigbee2mqtt/Hue Ingo": {
-				"{\"brightness\":254,\"color\":{\"hue\":42,\"saturation\":42,\"x\":42,\"y\":42},\"color_temp\":500,\"color_temp_startup\":500,\"linkquality\":255,\"power_on_behavior\":\"off\",\"state\":\"ON\"}", //initial event send by mock, not consumed by connector
-				"{\"brightness\":254,\"color\":{\"hue\":42,\"saturation\":42,\"x\":42,\"y\":42},\"color_temp\":500,\"color_temp_startup\":500,\"linkquality\":255,\"power_on_behavior\":\"off\",\"state\":\"ON\"}", //zigbee2mqtt/Hue Ingo/get response
-				"{\"brightness\":100,\"color\":{\"hue\":42,\"saturation\":42,\"x\":42,\"y\":42},\"color_temp\":500,\"color_temp_startup\":500,\"linkquality\":255,\"power_on_behavior\":\"off\",\"state\":\"ON\"}", //zigbee2mqtt/Hue Ingo/get response
-			},
-			"zigbee2mqtt/Hue Ingo/get": {
-				"{\"brightness\":null,\"color\":null,\"color_temp\":null,\"color_temp_startup\":null,\"power_on_behavior\":null,\"state\":null}", //triggered by retained zigbee2mqtt/bridge/devices message consumption
-			},
-			"event/zigbee:0x00178801020a70e7/get": {
-				"{\"brightness\":254,\"color\":{\"hue\":42,\"saturation\":42,\"x\":42,\"y\":42},\"color_temp\":500,\"color_temp_startup\":500,\"linkquality\":255,\"power_on_behavior\":\"off\",\"state\":\"ON\"}",
-				"{\"brightness\":100,\"color\":{\"hue\":42,\"saturation\":42,\"x\":42,\"y\":42},\"color_temp\":500,\"color_temp_startup\":500,\"linkquality\":255,\"power_on_behavior\":\"off\",\"state\":\"ON\"}",
-			},
-			"zigbee2mqtt/bridge/devices": {
-				expectedDeviceInfoList,
-				expectedDeviceInfoList,
-			},
-			"device-manager/refresh": {
-				"",
-			},
-			"command/zigbee:0x00178801020a70e7/set": {
-				"{\"command_id\": \"1\", \"data\": \"{\\\"brightness\\\": 100}\"}",
-			},
-			"zigbee2mqtt/Hue Ingo/set": {
-				"{\"brightness\": 100}",
-			},
-			"response/zigbee:0x00178801020a70e7/set": {"{\"command_id\":\"1\",\"data\":\"\"}"},
-		}
-
-		actual := getMessages()
-		if !reflect.DeepEqual(actual, expected) {
-			t.Errorf("\n%#v\n%#v\n", expected, actual)
-			actualJson, _ := json.Marshal(actual)
-			expectedJson, _ := json.Marshal(expected)
-			t.Log("\n", string(actualJson), "\n", string(expectedJson))
-		}
-	})
-
-	t.Run("get", func(t *testing.T) {
-		token := testwatcher.Publish("command/zigbee:0x00178801020a70e7/get", 2, false, `{"command_id": "2", "data": ""}`)
-		token.Wait()
-		err = token.Error()
-		if err != nil {
-			t.Error(err)
-			return
-		}
-		time.Sleep(2 * time.Second)
-
-		expected := map[string][]string{
-			"device-manager/device/mgw-zigbee-dc": {
-				"{\"method\":\"set\",\"device_id\":\"zigbee:0x00178801020a70e7\",\"data\":{\"name\":\"Hue Ingo\",\"state\":\"online\",\"device_type\":\"dt-id\"}}",
-				"{\"method\":\"set\",\"device_id\":\"zigbee:0x00178801020a70e7\",\"data\":{\"name\":\"Hue Ingo\",\"state\":\"online\",\"device_type\":\"dt-id\"}}",
-				"{\"method\":\"set\",\"device_id\":\"zigbee:0x00178801020a70e7\",\"data\":{\"name\":\"Hue Ingo\",\"state\":\"online\",\"device_type\":\"dt-id\"}}",
-				"{\"method\":\"set\",\"device_id\":\"zigbee:0x00178801020a70e7\",\"data\":{\"name\":\"Hue Ingo\",\"state\":\"online\",\"device_type\":\"dt-id\"}}",
-				"{\"method\":\"set\",\"device_id\":\"zigbee:0x00178801020a70e7\",\"data\":{\"name\":\"Hue Ingo\",\"state\":\"online\",\"device_type\":\"dt-id\"}}",
-			},
-			"zigbee2mqtt/Hue Ingo": {
-				"{\"brightness\":254,\"color\":{\"hue\":42,\"saturation\":42,\"x\":42,\"y\":42},\"color_temp\":500,\"color_temp_startup\":500,\"linkquality\":255,\"power_on_behavior\":\"off\",\"state\":\"ON\"}", //initial event send by mock, not consumed by connector
-				"{\"brightness\":254,\"color\":{\"hue\":42,\"saturation\":42,\"x\":42,\"y\":42},\"color_temp\":500,\"color_temp_startup\":500,\"linkquality\":255,\"power_on_behavior\":\"off\",\"state\":\"ON\"}", //zigbee2mqtt/Hue Ingo/get response
-				"{\"brightness\":100,\"color\":{\"hue\":42,\"saturation\":42,\"x\":42,\"y\":42},\"color_temp\":500,\"color_temp_startup\":500,\"linkquality\":255,\"power_on_behavior\":\"off\",\"state\":\"ON\"}", //zigbee2mqtt/Hue Ingo/get response
-			},
-			"zigbee2mqtt/Hue Ingo/get": {
-				"{\"brightness\":null,\"color\":null,\"color_temp\":null,\"color_temp_startup\":null,\"power_on_behavior\":null,\"state\":null}", //triggered by retained zigbee2mqtt/bridge/devices message consumption
-			},
-			"event/zigbee:0x00178801020a70e7/get": {
-				"{\"brightness\":254,\"color\":{\"hue\":42,\"saturation\":42,\"x\":42,\"y\":42},\"color_temp\":500,\"color_temp_startup\":500,\"linkquality\":255,\"power_on_behavior\":\"off\",\"state\":\"ON\"}",
-				"{\"brightness\":100,\"color\":{\"hue\":42,\"saturation\":42,\"x\":42,\"y\":42},\"color_temp\":500,\"color_temp_startup\":500,\"linkquality\":255,\"power_on_behavior\":\"off\",\"state\":\"ON\"}",
-			},
-			"zigbee2mqtt/bridge/devices": {
-				expectedDeviceInfoList,
-				expectedDeviceInfoList,
-			},
-			"device-manager/refresh": {
-				"",
-			},
-			"command/zigbee:0x00178801020a70e7/set": {
-				"{\"command_id\": \"1\", \"data\": \"{\\\"brightness\\\": 100}\"}",
-			},
-			"zigbee2mqtt/Hue Ingo/set": {
-				"{\"brightness\": 100}",
-			},
-			"command/zigbee:0x00178801020a70e7/get": {
-				"{\"command_id\": \"2\", \"data\": \"\"}",
-			},
-			"response/zigbee:0x00178801020a70e7/set": {"{\"command_id\":\"1\",\"data\":\"\"}"},
-			"response/zigbee:0x00178801020a70e7/get": {
-				"{\"command_id\":\"2\",\"data\":\"{\\\"brightness\\\":100,\\\"color\\\":{\\\"hue\\\":42,\\\"saturation\\\":42,\\\"x\\\":42,\\\"y\\\":42},\\\"color_temp\\\":500,\\\"color_temp_startup\\\":500,\\\"linkquality\\\":255,\\\"power_on_behavior\\\":\\\"off\\\",\\\"state\\\":\\\"ON\\\"}\"}",
-			},
-		}
-
-		actual := getMessages()
-		if !reflect.DeepEqual(actual, expected) {
-			t.Errorf("\n%#v\n%#v\n", expected, actual)
-			actualJson, _ := json.Marshal(actual)
-			expectedJson, _ := json.Marshal(expected)
-			t.Log("\n", string(actualJson), "\n", string(expectedJson))
 		}
 	})
 }

@@ -62,7 +62,6 @@ type Config struct {
 	AuthPassword             string  `json:"auth_password" config:"secret"`
 
 	DeviceRepositoryUrl string `json:"device_repository_url"`
-	FallbackFile        string `json:"fallback_file"`
 	MinCacheDuration    string `json:"min_cache_duration"`
 	MaxCacheDuration    string `json:"max_cache_duration"`
 
