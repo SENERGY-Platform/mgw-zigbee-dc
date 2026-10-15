@@ -26,7 +26,9 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
+	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/configuration"
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/devicerepo"
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/mgw"
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/model"
@@ -101,6 +103,7 @@ func (this *Connector) handleDeviceInfoUpdate(device model.ZigbeeDeviceInfo) *De
 			Name:       deviceName,
 			State:      deviceState,
 			DeviceType: deviceTypeId,
+			Attributes: this.deviceAttributes,
 		})
 		if err != nil {
 			this.config.GetLogger().Error("unable to set device", "deviceIeeeAddress", device.IeeeAddress, "error", err)
@@ -108,6 +111,25 @@ func (this *Connector) handleDeviceInfoUpdate(device model.ZigbeeDeviceInfo) *De
 		}
 	}
 	return result
+}
+
+const AttributeLastMessageMaxAge = "last_message_max_age"
+
+// returns the attributes to be set on every device; an attribute is only added if its config value is set
+func getDeviceAttributes(config configuration.Config) (result []mgw.Attribute, err error) {
+	for _, attr := range []mgw.Attribute{
+		{Key: AttributeLastMessageMaxAge, Value: strings.TrimSpace(config.LastMessageMaxAge)},
+	} {
+		if attr.Value == "" {
+			continue
+		}
+		_, err = time.ParseDuration(attr.Value)
+		if err != nil {
+			return nil, fmt.Errorf("invalid duration for device attribute %v: %w", attr.Key, err)
+		}
+		result = append(result, attr)
+	}
+	return result, nil
 }
 
 func isValidDevice(device model.ZigbeeDeviceInfo) bool {

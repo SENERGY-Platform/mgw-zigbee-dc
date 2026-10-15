@@ -72,6 +72,9 @@ type Config struct {
 
 	ModelAliases map[string]string
 
+	// added as device attribute of the same name to every device, if set; read by connection-check-v2
+	LastMessageMaxAge string `json:"last_message_max_age"`
+
 	LogLevel string       `json:"log_level"`
 	logger   *slog.Logger `json:"-"`
 }

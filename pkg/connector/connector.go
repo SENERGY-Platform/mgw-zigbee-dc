@@ -49,6 +49,10 @@ func StartWithDependencies(ctx context.Context, wg *sync.WaitGroup, config confi
 		devicerepo:         devicerepo,
 		devicestate:        map[string]mgw.State{},
 	}
+	connector.deviceAttributes, err = getDeviceAttributes(config)
+	if err != nil {
+		return
+	}
 	connector.zigbee, err = zigbee(ctx, wg, config, connector)
 	if err != nil {
 		return
@@ -75,6 +79,7 @@ type Connector struct {
 	devicerepo         DeviceRepo
 	devicestate        map[string]mgw.State
 	devicestateMux     sync.Mutex
+	deviceAttributes   []mgw.Attribute
 }
 
 type ZigbeeClient interface {

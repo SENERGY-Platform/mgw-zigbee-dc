@@ -23,11 +23,18 @@ type State string
 const Online State = "online"
 const Offline State = "offline"
 
-// {"name": "airSensor", "state": "online", "device_type": "urn:infai:ses:device-type:a8cbd322-9d8c-4f4c-afec-ae4b7986b6ed"}
+// {"name": "airSensor", "state": "online", "device_type": "urn:infai:ses:device-type:a8cbd322-9d8c-4f4c-afec-ae4b7986b6ed", "attributes": [{"key": "last_message_max_age", "value": "1h"}]}
 type DeviceInfo struct {
-	Name       string `json:"name"`
-	State      State  `json:"state"`
-	DeviceType string `json:"device_type"`
+	Name       string      `json:"name"`
+	State      State       `json:"state"`
+	DeviceType string      `json:"device_type"`
+	Attributes []Attribute `json:"attributes,omitempty"`
+}
+
+// the device-management-service rejects the whole message if an attribute carries any field other than key and value
+type Attribute struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
 }
 
 // {"method": "set", "device_id": "x2gHd2fwdxjUR_lmee3bLw-5ecf7fb0bf6d", "data": {"name": "airSensor", "state": "online", "device_type": "urn:infai:ses:device-type:a8cbd322-9d8c-4f4c-afec-ae4b7986b6ed"}}
