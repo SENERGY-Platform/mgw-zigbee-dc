@@ -1,11 +1,13 @@
-FROM golang:1.26 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.26 AS builder
+
+ARG TARGETOS TARGETARCH
 
 COPY . /go/src/app
 WORKDIR /go/src/app
 
 ENV GO111MODULE=on
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o app
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o app
 
 RUN git log -1 --oneline > version.txt
 
