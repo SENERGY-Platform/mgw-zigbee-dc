@@ -19,6 +19,7 @@ package zigbee2mqtt
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"time"
 
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/model"
@@ -36,8 +37,7 @@ func (this *Client) getDeviceInfoTopic() string {
 }
 
 func (this *Client) deviceInfoHandler(client paho.Client, message paho.Message) {
-	devices := []model.ZigbeeDeviceInfo{}
-	err := json.Unmarshal(message.Payload(), &devices)
+	devices, err := parseDeviceInfoMessage(message.Payload(), this.config.GetLogger())
 	if err != nil {
 		this.config.GetLogger().Error("unable to handle device info message", "error", err)
 		return
@@ -57,6 +57,27 @@ func (this *Client) deviceInfoHandler(client paho.Client, message paho.Message) 
 			}
 		}()
 	}
+}
+
+// parseDeviceInfoMessage skips and logs devices whose description can not be read,
+// so that one unknown expose format does not block every other device
+func parseDeviceInfoMessage(payload []byte, logger *slog.Logger) (devices []model.ZigbeeDeviceInfo, err error) {
+	raw := []json.RawMessage{}
+	err = json.Unmarshal(payload, &raw)
+	if err != nil {
+		return nil, err
+	}
+	devices = []model.ZigbeeDeviceInfo{}
+	for i, e := range raw {
+		device := model.ZigbeeDeviceInfo{}
+		err = json.Unmarshal(e, &device)
+		if err != nil {
+			logger.Error("skip unreadable device info", "index", i, "deviceIeeeAddress", device.IeeeAddress, "error", err)
+			continue
+		}
+		devices = append(devices, device)
+	}
+	return devices, nil
 }
 
 // GetDeviceList returns a list of model.ZigbeeDeviceInfo
