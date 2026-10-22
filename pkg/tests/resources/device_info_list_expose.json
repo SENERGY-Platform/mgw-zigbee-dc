@@ -1,0 +1,488 @@
+[
+  {
+    "definition": null,
+    "disabled": false,
+    "endpoints": {
+      "1": {
+        "bindings": [],
+        "clusters": {
+          "input": [
+            "genBasic",
+            "genTime",
+            "genOta"
+          ],
+          "output": [
+            "genPowerCfg",
+            "genPollCtrl",
+            "ssIasZone"
+          ]
+        },
+        "configured_reportings": [],
+        "scenes": []
+      },
+      "242": {
+        "bindings": [],
+        "clusters": {
+          "input": [],
+          "output": [
+            "greenPower"
+          ]
+        },
+        "configured_reportings": [],
+        "scenes": []
+      }
+    },
+    "friendly_name": "Coordinator",
+    "ieee_address": "0x00212effff093b38",
+    "interview_completed": true,
+    "interviewing": false,
+    "network_address": 0,
+    "supported": false,
+    "type": "Coordinator"
+  },
+  {
+    "date_code": "20210331",
+    "definition": {
+      "description": "Hue white and color ambiance E26/E27/E14",
+      "exposes": [
+        {
+          "features": [
+            {
+              "access": 7,
+              "description": "On/off state of this light",
+              "name": "state",
+              "property": "state",
+              "type": "binary",
+              "value_off": "OFF",
+              "value_on": "ON",
+              "value_toggle": "TOGGLE"
+            },
+            {
+              "access": 7,
+              "description": "Brightness of this light",
+              "name": "brightness",
+              "property": "brightness",
+              "type": "numeric",
+              "value_max": 254,
+              "value_min": 0
+            },
+            {
+              "access": 7,
+              "description": "Color temperature of this light",
+              "name": "color_temp",
+              "presets": [
+                {
+                  "description": "Coolest temperature supported",
+                  "name": "coolest",
+                  "value": 153
+                },
+                {
+                  "description": "Cool temperature (250 mireds / 4000 Kelvin)",
+                  "name": "cool",
+                  "value": 250
+                },
+                {
+                  "description": "Neutral temperature (370 mireds / 2700 Kelvin)",
+                  "name": "neutral",
+                  "value": 370
+                },
+                {
+                  "description": "Warm temperature (454 mireds / 2200 Kelvin)",
+                  "name": "warm",
+                  "value": 454
+                },
+                {
+                  "description": "Warmest temperature supported",
+                  "name": "warmest",
+                  "value": 500
+                }
+              ],
+              "property": "color_temp",
+              "type": "numeric",
+              "unit": "mired",
+              "value_max": 500,
+              "value_min": 153
+            },
+            {
+              "access": 7,
+              "description": "Color temperature after cold power on of this light",
+              "name": "color_temp_startup",
+              "presets": [
+                {
+                  "description": "Coolest temperature supported",
+                  "name": "coolest",
+                  "value": 153
+                },
+                {
+                  "description": "Cool temperature (250 mireds / 4000 Kelvin)",
+                  "name": "cool",
+                  "value": 250
+                },
+                {
+                  "description": "Neutral temperature (370 mireds / 2700 Kelvin)",
+                  "name": "neutral",
+                  "value": 370
+                },
+                {
+                  "description": "Warm temperature (454 mireds / 2200 Kelvin)",
+                  "name": "warm",
+                  "value": 454
+                },
+                {
+                  "description": "Warmest temperature supported",
+                  "name": "warmest",
+                  "value": 500
+                },
+                {
+                  "description": "Restore previous color_temp on cold power on",
+                  "name": "previous",
+                  "value": 65535
+                }
+              ],
+              "property": "color_temp_startup",
+              "type": "numeric",
+              "unit": "mired",
+              "value_max": 500,
+              "value_min": 153
+            },
+            {
+              "description": "Color of this light in the CIE 1931 color space (x/y)",
+              "features": [
+                {
+                  "access": 7,
+                  "name": "x",
+                  "property": "x",
+                  "type": "numeric"
+                },
+                {
+                  "access": 7,
+                  "name": "y",
+                  "property": "y",
+                  "type": "numeric"
+                }
+              ],
+              "name": "color_xy",
+              "property": "color",
+              "type": "composite"
+            },
+            {
+              "description": "Color of this light expressed as hue/saturation",
+              "features": [
+                {
+                  "access": 7,
+                  "name": "hue",
+                  "property": "hue",
+                  "type": "numeric"
+                },
+                {
+                  "access": 7,
+                  "name": "saturation",
+                  "property": "saturation",
+                  "type": "numeric"
+                }
+              ],
+              "name": "color_hs",
+              "property": "color",
+              "type": "composite"
+            }
+          ],
+          "type": "light"
+        },
+        {
+          "access": 2,
+          "description": "Triggers an effect on the light (e.g. make light blink for a few seconds)",
+          "name": "effect",
+          "property": "effect",
+          "type": "enum",
+          "values": [
+            "blink",
+            "breathe",
+            "okay",
+            "channel_change",
+            "finish_effect",
+            "stop_effect"
+          ]
+        },
+        {
+          "access": 7,
+          "description": "Controls the behavior when the device is powered on after power loss",
+          "name": "power_on_behavior",
+          "property": "power_on_behavior",
+          "type": "enum",
+          "values": [
+            "off",
+            "on",
+            "toggle",
+            "previous"
+          ]
+        },
+        {
+          "access": 1,
+          "description": "Link quality (signal strength)",
+          "name": "linkquality",
+          "property": "linkquality",
+          "type": "numeric",
+          "unit": "lqi",
+          "value_max": 255,
+          "value_min": 0
+        }
+      ],
+      "model": "9290012573A",
+      "options": [
+        {
+          "access": 2,
+          "description": "Controls the transition time (in seconds) of on/off, brightness, color temperature (if applicable) and color (if applicable) changes. Defaults to `0` (no transition).",
+          "name": "transition",
+          "property": "transition",
+          "type": "numeric",
+          "value_min": 0
+        },
+        {
+          "access": 2,
+          "description": "When enabled colors will be synced, e.g. if the light supports both color x/y and color temperature a conversion from color x/y to color temperature will be done when setting the x/y color (default true).",
+          "name": "color_sync",
+          "property": "color_sync",
+          "type": "binary",
+          "value_off": false,
+          "value_on": true
+        }
+      ],
+      "supports_ota": true,
+      "vendor": "Philips"
+    },
+    "disabled": false,
+    "endpoints": {
+      "11": {
+        "bindings": [],
+        "clusters": {
+          "input": [
+            "genBasic",
+            "genIdentify",
+            "genGroups",
+            "genScenes",
+            "genOnOff",
+            "genLevelCtrl",
+            "touchlink",
+            "manuSpecificPhilips2",
+            "lightingColorCtrl",
+            "manuSpecificUbisysDimmerSetup"
+          ],
+          "output": [
+            "genOta"
+          ]
+        },
+        "configured_reportings": [],
+        "scenes": []
+      },
+      "242": {
+        "bindings": [],
+        "clusters": {
+          "input": [
+            "greenPower"
+          ],
+          "output": [
+            "greenPower"
+          ]
+        },
+        "configured_reportings": [],
+        "scenes": []
+      }
+    },
+    "friendly_name": "Hue Ingo",
+    "ieee_address": "0x00178801020a70e7",
+    "interview_completed": true,
+    "interviewing": false,
+    "manufacturer": "Signify Netherlands B.V.",
+    "model_id": "LCT007",
+    "network_address": 31787,
+    "power_source": "Mains (single phase)",
+    "software_build_id": "67.88.1",
+    "supported": true,
+    "type": "Router"
+  },
+  {
+    "definition": {
+      "description": "Room thermostat II 230V",
+      "exposes": [
+        {
+          "type": "climate",
+          "features": [
+            {
+              "type": "numeric",
+              "name": "local_temperature",
+              "label": "Local temperature",
+              "access": 5,
+              "property": "local_temperature",
+              "unit": "°C",
+              "description": "Current temperature measured on the device"
+            },
+            {
+              "type": "numeric",
+              "name": "local_temperature_calibration",
+              "label": "Local temperature calibration",
+              "access": 7,
+              "property": "local_temperature_calibration",
+              "unit": "°C",
+              "value_min": -5,
+              "value_max": 5,
+              "description": "Offset to add/subtract to the local temperature"
+            },
+            {
+              "type": "numeric",
+              "name": "occupied_heating_setpoint",
+              "label": "Occupied heating setpoint",
+              "access": 7,
+              "property": "occupied_heating_setpoint",
+              "unit": "°C",
+              "value_min": 5,
+              "value_max": 30,
+              "description": "Temperature setpoint"
+            },
+            {
+              "type": "enum",
+              "name": "system_mode",
+              "label": "System mode",
+              "property": "system_mode",
+              "access": 7,
+              "values": [
+                "off",
+                "heat",
+                "cool"
+              ],
+              "description": "Mode of this device"
+            },
+            {
+              "type": "composite",
+              "name": "schedule",
+              "label": "Schedule",
+              "property": "weekly_schedule",
+              "access": 7,
+              "features": [
+                {
+                  "type": "list",
+                  "name": "dayofweek",
+                  "label": "Day of week",
+                  "property": "dayofweek",
+                  "access": 2,
+                  "item_type": {
+                    "type": "composite",
+                    "name": "day",
+                    "label": "Day",
+                    "access": 2,
+                    "features": [
+                      {
+                        "type": "enum",
+                        "name": "day",
+                        "label": "Day",
+                        "property": "day",
+                        "access": 2,
+                        "values": [
+                          "monday",
+                          "tuesday",
+                          "wednesday",
+                          "thursday",
+                          "friday",
+                          "saturday",
+                          "sunday",
+                          "away_or_vacation"
+                        ]
+                      }
+                    ]
+                  },
+                  "length_min": 1,
+                  "length_max": 8,
+                  "description": "Days on which the schedule will be active."
+                },
+                {
+                  "type": "list",
+                  "name": "transitions",
+                  "label": "Transitions",
+                  "property": "transitions",
+                  "access": 2,
+                  "item_type": {
+                    "type": "composite",
+                    "name": "transition",
+                    "label": "Transition",
+                    "access": 2,
+                    "features": [
+                      {
+                        "type": "composite",
+                        "name": "time",
+                        "label": "Time",
+                        "property": "transition_time",
+                        "access": 2,
+                        "description": "Trigger transition X minutes after 00:00.",
+                        "features": [
+                          {
+                            "type": "numeric",
+                            "name": "hour",
+                            "label": "Hour",
+                            "access": 2,
+                            "property": "hour"
+                          },
+                          {
+                            "type": "numeric",
+                            "name": "minute",
+                            "label": "Minute",
+                            "access": 2,
+                            "property": "minute"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "numeric",
+                        "name": "heat_setpoint",
+                        "label": "Heat setpoint",
+                        "access": 2,
+                        "property": "heat_setpoint",
+                        "description": "Target heat setpoint"
+                      }
+                    ]
+                  },
+                  "length_min": 1,
+                  "length_max": 10
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "numeric",
+          "name": "humidity",
+          "label": "Humidity",
+          "access": 5,
+          "property": "humidity",
+          "unit": "%",
+          "description": "Measured relative humidity"
+        },
+        {
+          "type": "numeric",
+          "name": "linkquality",
+          "label": "Linkquality",
+          "access": 1,
+          "property": "linkquality",
+          "unit": "lqi",
+          "value_min": 0,
+          "value_max": 255,
+          "description": "Link quality (signal strength)"
+        }
+      ],
+      "model": "BTH-RM230Z",
+      "options": [],
+      "supports_ota": true,
+      "vendor": "Bosch"
+    },
+    "disabled": false,
+    "endpoints": {},
+    "friendly_name": "0x70ac08fffe6d1c42",
+    "ieee_address": "0x70ac08fffe6d1c42",
+    "interview_completed": true,
+    "interviewing": false,
+    "manufacturer": "Bosch",
+    "model_id": "RBSH-RTH0-ZB-EU",
+    "network_address": 12345,
+    "power_source": "Mains (single phase)",
+    "supported": true,
+    "type": "Router"
+  }
+]

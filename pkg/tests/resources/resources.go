@@ -29,6 +29,12 @@ var DeviceInfoExampleJson []byte
 
 var DeviceInfoExample []model.ZigbeeDeviceInfo
 
+// DeviceInfoListExposeJson is a bridge/devices message with a Bosch BTH-RM230Z, whose climate expose contains list exposes.
+// The BTH-RM230Z entry is derived from its zigbee-herdsman-converters definition.
+//
+//go:embed device_info_list_expose.json
+var DeviceInfoListExposeJson []byte
+
 func init() {
 	err := json.Unmarshal(DeviceInfoExampleJson, &DeviceInfoExample)
 	if err != nil {

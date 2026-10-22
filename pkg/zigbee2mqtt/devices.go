@@ -153,8 +153,17 @@ func GetZigbeeMessageStructOfFeatureList(features []model.ZigbeeDeviceInfoFeatur
 			case "text":
 				req[field.Property] = "text"
 			case "list":
-				sub := GetZigbeeMessageStructOfFeatureList(field.ItemType, access)
-				req[field.Property] = []interface{}{sub}
+				if field.ItemType == nil {
+					req[field.Property] = []interface{}{}
+					break
+				}
+				sub := GetZigbeeMessageStructOfFeatureList([]model.ZigbeeDeviceInfoFeature{*field.ItemType}, access)
+				if len(field.ItemType.Features) > 0 {
+					req[field.Property] = []interface{}{sub}
+				} else {
+					//zigbee2mqtt removes the property of item_type, so a non-composite item is found under the empty key
+					req[field.Property] = []interface{}{sub[field.ItemType.Property]}
+				}
 			}
 		}
 	}
