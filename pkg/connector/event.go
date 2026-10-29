@@ -69,11 +69,26 @@ func (this *Connector) eventIsAllowed(event EventDesc) bool {
 }
 
 func (this *Connector) getServiceIds(event EventDesc) ([]string, error) {
-	dt, err := this.devicerepo.FindDeviceType(event.Device)
+	dt, err := this.getEventDeviceType(event.Device)
 	if err != nil {
 		return nil, err
 	}
 	return getServiceIds(dt, event.Payload)
+}
+
+// getEventDeviceType takes the device type of a known device by its id, as getDeviceTypeId does,
+// so that its events keep their services when zigbee2mqtt renames the vendor or model of its
+// definition; vendor and model only decide for unknown devices, for a known device whose type is
+// not in the zigbee list, and while the repository cannot be read
+func (this *Connector) getEventDeviceType(device model.ZigbeeDeviceInfo) (model.DeviceType, error) {
+	dtId, known, err := this.devicerepo.GetKnownDeviceDeviceTypeId(this.getDeviceId(device))
+	if err == nil && known {
+		dt, err := this.devicerepo.GetDeviceType(dtId)
+		if !errors.Is(err, model.NoMatchingDeviceTypeFound) {
+			return dt, err
+		}
+	}
+	return this.devicerepo.FindDeviceType(device)
 }
 
 func getServiceIds(dt model.DeviceType, pl []byte) ([]string, error) {

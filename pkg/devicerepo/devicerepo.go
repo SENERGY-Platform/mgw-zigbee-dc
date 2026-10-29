@@ -40,6 +40,7 @@ type DeviceRepo struct {
 	createdDt               map[string]models.DeviceType
 	repoclient              client.Interface
 	deviceDeviceTypeIdCache map[string]string
+	knownMux                sync.Mutex // device info updates and events both read deviceDeviceTypeIdCache
 }
 
 type Auth interface {
@@ -97,7 +98,9 @@ func (this *DeviceRepo) getDeviceFromRepo(deviceId string) (device models.Device
 }
 
 func (this *DeviceRepo) GetKnownDeviceDeviceTypeId(deviceId string) (dtId string, known bool, err error) {
+	this.knownMux.Lock()
 	dtId, known = this.deviceDeviceTypeIdCache[deviceId]
+	this.knownMux.Unlock()
 	if known {
 		return dtId, true, nil
 	}
@@ -109,8 +112,44 @@ func (this *DeviceRepo) GetKnownDeviceDeviceTypeId(deviceId string) (dtId string
 		return "", false, nil
 	}
 	dtId = device.DeviceTypeId
+	this.knownMux.Lock()
 	this.deviceDeviceTypeIdCache[deviceId] = dtId
+	this.knownMux.Unlock()
 	return dtId, true, nil
+}
+
+// GetDeviceType returns the zigbee device type with the given id; like FindDeviceType, the list is
+// reloaded once if the id is missing
+func (this *DeviceRepo) GetDeviceType(dtId string) (dt model.DeviceType, err error) {
+	deviceTypes, err := this.ListZigbeeDeviceTypes()
+	if err != nil {
+		return dt, err
+	}
+	deviceType, ok := getDeviceTypeById(deviceTypes, dtId)
+	if !ok && time.Since(this.lastDtRefresh) > this.minCacheDuration {
+		err = this.refreshDeviceTypeList()
+		if err != nil {
+			return dt, err
+		}
+		deviceTypes, err = this.ListZigbeeDeviceTypes()
+		if err != nil {
+			return dt, err
+		}
+		deviceType, ok = getDeviceTypeById(deviceTypes, dtId)
+	}
+	if !ok {
+		return dt, fmt.Errorf("%w: id=%v", model.NoMatchingDeviceTypeFound, dtId)
+	}
+	return deviceType, nil
+}
+
+func getDeviceTypeById(devicetypes []model.DeviceType, dtId string) (model.DeviceType, bool) {
+	for _, dt := range devicetypes {
+		if dt.Id == dtId {
+			return dt, true
+		}
+	}
+	return model.DeviceType{}, false
 }
 
 func (this *DeviceRepo) FindDeviceTypeId(device model.ZigbeeDeviceInfo) (dtId string, err error) {
