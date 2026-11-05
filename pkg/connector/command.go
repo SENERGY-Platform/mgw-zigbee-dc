@@ -18,6 +18,7 @@ package connector
 
 import (
 	"context"
+	"encoding/json"
 	"sync"
 
 	"github.com/SENERGY-Platform/mgw-zigbee-dc/pkg/mgw"
@@ -75,7 +76,7 @@ func (this *Connector) handleCommand(command CommandDesc) {
 func (this *Connector) handleSet(ieee string, command CommandDesc) {
 	var cancelAck func() bool
 	if this.acks != nil {
-		if expected, ok := ackExpectation(command.Command.Data, this.getExposes(ieee)); ok {
+		if expected, ok := ackExpectation(command.Command.Data, this.getExposes(ieee), this.getLastState(ieee)); ok {
 			// registered before publishing, so that a fast state can not be missed
 			cancelAck = this.acks.Register(ieee, command.DeviceId, command.ServiceId, command.Command.CommandId, expected)
 		}
@@ -101,6 +102,19 @@ func (this *Connector) handleSet(ieee string, command CommandDesc) {
 		this.config.GetLogger().Error("unable to send empty response", "error", err)
 		this.mgw.SendCommandError(command.Command.CommandId, "unable to send empty response: "+err.Error())
 	}
+}
+
+// getLastState returns the last state zigbee2mqtt published for the device; nil if none is known or it is not a JSON object
+func (this *Connector) getLastState(ieee string) map[string]interface{} {
+	raw, err := this.zigbee.GetByIeee(ieee)
+	if err != nil {
+		return nil
+	}
+	var state map[string]interface{}
+	if err = json.Unmarshal(raw, &state); err != nil {
+		return nil
+	}
+	return state
 }
 
 // getExposes returns the exposes of the device definition; nil if the device or its definition is not available

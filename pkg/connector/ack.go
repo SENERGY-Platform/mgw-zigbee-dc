@@ -62,7 +62,12 @@ func parseCommandAckTimeout(config configuration.Config) (time.Duration, error) 
 // Otherwise a key is comparable only if the definition exposes it, searched through nested features, with the
 // published access bit; a key that is not exposed never appears in the state and would end in a timeout.
 // A property without access information (access 0) is treated as published.
-func ackExpectation(data string, exposes []model.ZigbeeDeviceInfoFeature) (expected map[string]interface{}, ok bool) {
+//
+// lastState is the last state zigbee2mqtt published for the device, nil or empty if none is known. If it is known, a
+// key is comparable only if it occurs in it: some definitions expose a property as published that the device never
+// reports (Aqara SRTS-A01 external_temperature_input), and zigbee2mqtt's state carries every property it has cached
+// (advanced.cache_state, the default). A property the device has not reported yet is therefore not confirmed.
+func ackExpectation(data string, exposes []model.ZigbeeDeviceInfoFeature, lastState map[string]interface{}) (expected map[string]interface{}, ok bool) {
 	var payload map[string]interface{}
 	if err := json.Unmarshal([]byte(data), &payload); err != nil {
 		return nil, false
@@ -79,6 +84,11 @@ func ackExpectation(data string, exposes []model.ZigbeeDeviceInfoFeature) (expec
 		}
 		if published != nil && !published[key] {
 			continue
+		}
+		if len(lastState) > 0 {
+			if _, reported := lastState[key]; !reported {
+				continue
+			}
 		}
 		expected[key] = value
 	}

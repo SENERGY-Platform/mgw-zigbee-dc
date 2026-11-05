@@ -68,29 +68,36 @@ var testExposes = []model.ZigbeeDeviceInfoFeature{
 }
 
 func TestAckExpectation(t *testing.T) {
+	lastState := map[string]interface{}{"state": "OFF", "color": map[string]interface{}{"x": 0.1}, "linkquality": float64(80)}
 	for name, tc := range map[string]struct {
-		data    string
-		exposes []model.ZigbeeDeviceInfoFeature
-		want    map[string]interface{}
-		wantOk  bool
+		data      string
+		exposes   []model.ZigbeeDeviceInfoFeature
+		lastState map[string]interface{}
+		want      map[string]interface{}
+		wantOk    bool
 	}{
-		"plain":                          {`{"state":"ON","brightness":100}`, testExposes, map[string]interface{}{"state": "ON", "brightness": float64(100)}, true},
-		"transition excluded":            {`{"state":"ON","transition":2}`, testExposes, map[string]interface{}{"state": "ON"}, true},
-		"only transition":                {`{"transition":2}`, testExposes, nil, false},
-		"unpublished excluded":           {`{"state":"ON","effect":"blink"}`, testExposes, map[string]interface{}{"state": "ON"}, true},
-		"only unpublished":               {`{"effect":"blink"}`, testExposes, nil, false},
-		"not exposed excluded":           {`{"state":"ON","brightness_percent":50}`, testExposes, map[string]interface{}{"state": "ON"}, true},
-		"only not exposed":               {`{"brightness_percent":50}`, testExposes, nil, false},
-		"nested property":                {`{"color":{"x":0.3}}`, testExposes, map[string]interface{}{"color": map[string]interface{}{"x": 0.3}}, true},
-		"no exposes: all but transition": {`{"effect":"blink","foo":1,"transition":1}`, nil, map[string]interface{}{"effect": "blink", "foo": float64(1)}, true},
-		"not an object":                  {`[1,2]`, testExposes, nil, false},
-		"not json":                       {`on`, testExposes, nil, false},
-		"empty":                          {``, testExposes, nil, false},
-		"empty object":                   {`{}`, testExposes, nil, false},
-		"json null":                      {`null`, testExposes, nil, false},
+		"plain":                          {`{"state":"ON","brightness":100}`, testExposes, nil, map[string]interface{}{"state": "ON", "brightness": float64(100)}, true},
+		"transition excluded":            {`{"state":"ON","transition":2}`, testExposes, nil, map[string]interface{}{"state": "ON"}, true},
+		"only transition":                {`{"transition":2}`, testExposes, nil, nil, false},
+		"unpublished excluded":           {`{"state":"ON","effect":"blink"}`, testExposes, nil, map[string]interface{}{"state": "ON"}, true},
+		"only unpublished":               {`{"effect":"blink"}`, testExposes, nil, nil, false},
+		"not exposed excluded":           {`{"state":"ON","brightness_percent":50}`, testExposes, nil, map[string]interface{}{"state": "ON"}, true},
+		"only not exposed":               {`{"brightness_percent":50}`, testExposes, nil, nil, false},
+		"nested property":                {`{"color":{"x":0.3}}`, testExposes, nil, map[string]interface{}{"color": map[string]interface{}{"x": 0.3}}, true},
+		"no exposes: all but transition": {`{"effect":"blink","foo":1,"transition":1}`, nil, nil, map[string]interface{}{"effect": "blink", "foo": float64(1)}, true},
+		"not an object":                  {`[1,2]`, testExposes, nil, nil, false},
+		"not json":                       {`on`, testExposes, nil, nil, false},
+		"empty":                          {``, testExposes, nil, nil, false},
+		"empty object":                   {`{}`, testExposes, nil, nil, false},
+		"json null":                      {`null`, testExposes, nil, nil, false},
+		"last state keeps reported keys": {`{"state":"ON","color":{"x":0.3}}`, testExposes, lastState, map[string]interface{}{"state": "ON", "color": map[string]interface{}{"x": 0.3}}, true},
+		"last state drops unreported":    {`{"state":"ON","brightness":100}`, testExposes, lastState, map[string]interface{}{"state": "ON"}, true},
+		"only unreported keys":           {`{"brightness":100}`, testExposes, lastState, nil, false},
+		"last state without exposes":     {`{"external_temperature_input":19.5,"foo":1}`, nil, map[string]interface{}{"sensor": "external", "foo": float64(2)}, map[string]interface{}{"foo": float64(1)}, true},
+		"empty last state is unknown":    {`{"state":"ON","brightness":100}`, testExposes, map[string]interface{}{}, map[string]interface{}{"state": "ON", "brightness": float64(100)}, true},
 	} {
 		t.Run(name, func(t *testing.T) {
-			got, ok := ackExpectation(tc.data, tc.exposes)
+			got, ok := ackExpectation(tc.data, tc.exposes, tc.lastState)
 			if ok != tc.wantOk {
 				t.Fatalf("ok: got %v, want %v (%v)", ok, tc.wantOk, got)
 			}
@@ -353,8 +360,16 @@ func waitFor(t *testing.T, cond func() bool) {
 type fakeSetZigbee struct {
 	ZigbeeClient
 	devices []model.ZigbeeDeviceInfo
+	state   []byte // last published state; nil means none known
 	setErr  error
 	onSet   func()
+}
+
+func (this *fakeSetZigbee) GetByIeee(string) ([]byte, error) {
+	if this.state == nil {
+		return nil, model.ErrNoValueFound
+	}
+	return this.state, nil
 }
 
 func (this *fakeSetZigbee) SetByIeee(string, []byte) error {
@@ -483,6 +498,48 @@ func TestHandleSet(t *testing.T) {
 		if responses, _ := rec.snapshot(); len(responses) != 0 {
 			t.Errorf("%v", responses)
 		}
+	})
+
+	t.Run("key the device never reports responds immediately and empty", func(t *testing.T) {
+		thermostat := model.ZigbeeDeviceInfo{IeeeAddress: "ieee1", Definition: model.ZigbeeDeviceInfoDefinition{Exposes: []model.ZigbeeDeviceInfoFeature{
+			{Type: "numeric", Property: "external_temperature_input", Access: 7},
+			{Type: "enum", Property: "sensor", Access: 7},
+		}}}
+		zb := &fakeSetZigbee{devices: []model.ZigbeeDeviceInfo{thermostat}, state: []byte(`{"sensor":"external","local_temperature":16.9}`)}
+		c, rec := newConnector(t, "1s", zb)
+		c.handleCommand(cmd(`{"external_temperature_input":19.5}`))
+		responses, errs := rec.snapshot()
+		if len(responses) != 1 || responses[0].Data != "" || len(errs) != 0 {
+			t.Errorf("%v %v", responses, errs)
+		}
+		if c.acks.hasPending("ieee1") {
+			t.Error("entry registered for a key the device never reports")
+		}
+	})
+
+	t.Run("unreadable or null last state falls back to the exposes", func(t *testing.T) {
+		for _, state := range []string{`not json`, `null`, `[1]`, `{}`} {
+			zb := &fakeSetZigbee{devices: []model.ZigbeeDeviceInfo{device}, state: []byte(state)}
+			c, rec := newConnector(t, "1s", zb)
+			c.handleCommand(cmd(`{"state":"ON"}`))
+			if responses, errs := rec.snapshot(); len(responses) != 0 || len(errs) != 0 {
+				t.Errorf("%v: answered before the state: %v %v", state, responses, errs)
+			}
+			if !c.acks.hasPending("ieee1") {
+				t.Errorf("%v: no entry registered", state)
+			}
+		}
+	})
+
+	t.Run("key in the last state waits for the state", func(t *testing.T) {
+		zb := &fakeSetZigbee{devices: []model.ZigbeeDeviceInfo{device}, state: []byte(`{"state":"OFF"}`)}
+		c, rec := newConnector(t, "1s", zb)
+		c.handleCommand(cmd(`{"state":"ON"}`))
+		if responses, errs := rec.snapshot(); len(responses) != 0 || len(errs) != 0 {
+			t.Fatalf("answered before the state: %v %v", responses, errs)
+		}
+		c.StateObserved("ieee1", []byte(`{"state":"ON"}`))
+		waitFor(t, func() bool { r, _ := rec.snapshot(); return len(r) == 1 })
 	})
 
 	t.Run("unknown device definition compares every key", func(t *testing.T) {
