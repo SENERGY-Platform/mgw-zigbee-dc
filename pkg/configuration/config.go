@@ -27,6 +27,7 @@ import (
 	"runtime/debug"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	struct_logger "github.com/SENERGY-Platform/go-service-base/struct-logger"
@@ -170,10 +171,18 @@ func handleEnvironmentVars(config *Config) {
 	}
 }
 
+// loggerMux guards the lazy creation in GetLogger: the goroutines started by the connector share their
+// copy of the config and log their start at the same time. It is package-level because Config is
+// copied by value and must not carry a lock.
+var loggerMux sync.Mutex
+
 func (this *Config) GetLogger() *slog.Logger {
+	loggerMux.Lock()
+	defer loggerMux.Unlock()
 	if this.logger == nil {
+		level := this.LogLevel
 		if this.Debug {
-			this.LogLevel = "debug"
+			level = "debug"
 		}
 		info, ok := debug.ReadBuildInfo()
 		project := ""
@@ -187,7 +196,7 @@ func (this *Config) GetLogger() *slog.Logger {
 		this.logger = struct_logger.New(
 			struct_logger.Config{
 				Handler:    struct_logger.JsonHandlerSelector,
-				Level:      this.LogLevel,
+				Level:      level,
 				TimeFormat: time.RFC3339Nano,
 				TimeUtc:    true,
 				AddMeta:    true,
