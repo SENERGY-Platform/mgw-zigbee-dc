@@ -49,6 +49,10 @@ func (this *Client) eventHandler(client paho.Client, message paho.Message) {
 		this.config.GetLogger().Error("unable to get friendly device name", "deviceName", deviceName, "error", err)
 		return
 	}
+	if !message.Retained() {
+		// outside of valueMux; the connector only matches and hands answers to their own goroutines
+		this.connector.StateObserved(device.IeeeAddress, message.Payload())
+	}
 	this.valueMux.Lock()
 	defer this.valueMux.Unlock()
 	this.values[device.IeeeAddress] = message.Payload()

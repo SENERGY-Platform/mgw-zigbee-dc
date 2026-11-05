@@ -39,6 +39,8 @@ type Client struct {
 
 type Connector interface {
 	Event(device model.ZigbeeDeviceInfo, payload []byte)
+	// StateObserved is called for every non-retained state message of a known device; it must not block
+	StateObserved(ieeeAddress string, payload []byte)
 	DeviceInfoUpdate(devices []model.ZigbeeDeviceInfo)
 }
 

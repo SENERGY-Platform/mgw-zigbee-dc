@@ -363,13 +363,30 @@ func TestIntegration(t *testing.T) {
 		}
 	})
 
+	expectedSetState := "{\"brightness\":100,\"color\":{\"hue\":42,\"saturation\":42,\"x\":42,\"y\":42},\"color_temp\":500,\"color_temp_startup\":500,\"linkquality\":255,\"power_on_behavior\":\"off\",\"state\":\"OFF\"}"
+	expectedSetResponse, err := json.Marshal(mgw.Command{CommandId: "1", Data: expectedSetState}) //the set response carries the state published after the set
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	t.Run("set", func(t *testing.T) {
+		// the state follows the set command after a delay; the response must not be sent before
+		zigbeemock.SetStateDelay(time.Second)
+		defer zigbeemock.SetStateDelay(0)
 		token := testwatcher.Publish("command/zigbee:0x00178801020a70e7/set", 2, false, `{"command_id": "1", "data": "{\"brightness\": 100}"}`)
 		token.Wait()
 		err = token.Error()
 		if err != nil {
 			t.Error(err)
 			return
+		}
+		time.Sleep(500 * time.Millisecond)
+		if early := getMessages()["response/zigbee:0x00178801020a70e7/set"]; len(early) != 0 {
+			t.Errorf("set response sent before the state: %#v", early)
+		}
+		if early := getMessages()["zigbee2mqtt/Hue Ingo"]; len(early) != 3 {
+			t.Errorf("state published too early, test setup is wrong: %#v", early)
 		}
 		time.Sleep(2 * time.Second)
 		expected := map[string][]string{
@@ -410,7 +427,7 @@ func TestIntegration(t *testing.T) {
 			"zigbee2mqtt/Hue Ingo/set": {
 				"{\"brightness\": 100}",
 			},
-			"response/zigbee:0x00178801020a70e7/set": {"{\"command_id\":\"1\",\"data\":\"\"}"},
+			"response/zigbee:0x00178801020a70e7/set": {string(expectedSetResponse)}, //carries the state published after the set
 		}
 
 		actualMessages := getMessages()
@@ -474,7 +491,7 @@ func TestIntegration(t *testing.T) {
 				"{\"brightness\": 100}",
 			},
 			"response/zigbee:0x00178801020a70e7/set": {
-				"{\"command_id\":\"1\",\"data\":\"\"}",
+				string(expectedSetResponse),
 			},
 			"response/zigbee:0x00178801020a70e7/get": {
 				"{\"command_id\":\"2\",\"data\":\"{\\\"brightness\\\":100,\\\"color\\\":{\\\"hue\\\":42,\\\"saturation\\\":42,\\\"x\\\":42,\\\"y\\\":42},\\\"color_temp\\\":500,\\\"color_temp_startup\\\":500,\\\"linkquality\\\":255,\\\"power_on_behavior\\\":\\\"off\\\",\\\"state\\\":\\\"OFF\\\"}\"}",

@@ -34,6 +34,16 @@ The 'auth_endpoint' config field can/should be left empty if this component is u
   - used to match device-type
   - found in mqtt messages in zigbee2mqtt/bridge/devices
   - e.g. 9290012573A in $[1].definition.model in pkg/tests/resources/device_info_example.json
+### Command Acknowledgement
+
+- `COMMAND_ACK_TIMEOUT` (json `command_ack_timeout`, default `30s`)
+  - Go duration, e.g. `5s`, `1m`; `-` and `0s` disable the acknowledgement (an empty environment variable is ignored by the env loader and keeps the config.json value; `""` works only in config.json). An invalid value stops the connector at start.
+  - A `set` command is answered when zigbee2mqtt publishes a (non-retained) state of the device that contains the values of the set payload; the response `data` is that state.
+  - If no such state arrives within the timeout, an error is sent to `error/command/<command_id>` and no response.
+  - Compared are the keys of the set payload without `transition` and without keys that the device definition does not expose as published state. Strings are compared case-insensitive, numbers as numbers, `"toggle"` matches any value, object and array values only need their key present.
+  - Known limits: a value that zigbee2mqtt normalizes (string presets like `color_temp: "warm"`, values clamped or rounded by the device) never matches and ends in the timeout error although the device reacted. A set to the value the device already has can be confirmed by any later state message, e.g. the echo of a `get`.
+  - If the payload is not a JSON object or has no comparable key, or the acknowledgement is disabled, the response is sent immediately with empty `data`.
+
 ### Device Attributes
 
 Set on every device this connector reports to the device-management-service, but only if the matching config field or environment variable is set (Go duration, e.g. `1h`, `24h`; not `7d`). An invalid duration stops the connector at start.

@@ -53,6 +53,18 @@ func StartWithDependencies(ctx context.Context, wg *sync.WaitGroup, config confi
 	if err != nil {
 		return
 	}
+	ackTimeout, err := parseCommandAckTimeout(config)
+	if err != nil {
+		return
+	}
+	if ackTimeout > 0 {
+		// has to exist before the zigbee client, which starts delivering states on creation
+		connector.acks = newAckRegistry(ctx, wg, ackTimeout, config.GetLogger(), func(deviceId string, serviceId string, command mgw.Command) error {
+			return connector.mgw.Respond(deviceId, serviceId, command)
+		}, func(commandId string, msg string) {
+			connector.mgw.SendCommandError(commandId, msg)
+		})
+	}
 	connector.zigbee, err = zigbee(ctx, wg, config, connector)
 	if err != nil {
 		return
@@ -80,6 +92,7 @@ type Connector struct {
 	devicestate        map[string]mgw.State
 	devicestateMux     sync.Mutex
 	deviceAttributes   []mgw.Attribute
+	acks               *ackRegistry // nil if CommandAckTimeout is disabled
 }
 
 type ZigbeeClient interface {
@@ -123,6 +136,14 @@ func (this *Connector) Event(device model.ZigbeeDeviceInfo, payload []byte) {
 	this.eventbuffer <- EventDesc{
 		Device:  device,
 		Payload: payload,
+	}
+}
+
+// StateObserved receives every non-retained device state, independent of the online state and of the event filtering;
+// it does not block
+func (this *Connector) StateObserved(ieeeAddress string, payload []byte) {
+	if this.acks != nil {
+		this.acks.Observe(ieeeAddress, payload)
 	}
 }
 

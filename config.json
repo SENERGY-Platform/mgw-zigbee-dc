@@ -33,5 +33,7 @@
     "create_missing_device_types_with_protocol": "urn:infai:ses:protocol:f3a63aeb-187e-4dd9-9ef5-d97a6eb6292b",
     "create_missing_device_types_with_protocol_segment": "urn:infai:ses:protocol-segment:0d211842-cef8-41ec-ab6b-9dbc31bc3a65",
 
-    "last_message_max_age": ""
+    "last_message_max_age": "",
+
+    "command_ack_timeout": "30s"
 }

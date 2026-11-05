@@ -75,6 +75,10 @@ type Config struct {
 	// added as device attribute of the same name to every device, if set; read by connection-check-v2
 	LastMessageMaxAge string `json:"last_message_max_age"`
 
+	// a set command is answered when zigbee2mqtt publishes a matching device state, or fails after this duration;
+	// "", "-" and a zero duration answer immediately and empty
+	CommandAckTimeout string `json:"command_ack_timeout"`
+
 	LogLevel string       `json:"log_level"`
 	logger   *slog.Logger `json:"-"`
 }

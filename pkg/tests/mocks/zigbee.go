@@ -34,6 +34,20 @@ type ZigbeeMock struct {
 	mqtt   paho.Client
 	values map[string]map[string]interface{}
 	mux    sync.Mutex
+	// delay between a set message and the state the mock publishes as its result
+	setDelay time.Duration
+}
+
+func (this *ZigbeeMock) SetStateDelay(delay time.Duration) {
+	this.mux.Lock()
+	defer this.mux.Unlock()
+	this.setDelay = delay
+}
+
+func (this *ZigbeeMock) getStateDelay() time.Duration {
+	this.mux.Lock()
+	defer this.mux.Unlock()
+	return this.setDelay
 }
 
 func NewZigbeeMock(ctx context.Context, wg *sync.WaitGroup, config configuration.Config) (*ZigbeeMock, error) {
@@ -81,6 +95,7 @@ func (this *ZigbeeMock) startListener() error {
 	token := this.mqtt.Subscribe(this.config.ZigbeeMqttTopicPrefix+"+/set", 2, func(client paho.Client, message paho.Message) {
 		go func() {
 			device := strings.TrimPrefix(strings.TrimSuffix(message.Topic(), "/set"), this.config.ZigbeeMqttTopicPrefix)
+			time.Sleep(this.getStateDelay())
 			this.setValue(device, message.Payload())
 			event := this.getValue(device)
 			t := this.mqtt.Publish(this.config.ZigbeeMqttTopicPrefix+device, 2, false, event)
