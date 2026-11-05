@@ -34,6 +34,9 @@ The 'auth_endpoint' config field can/should be left empty if this component is u
   - used to match device-type
   - found in mqtt messages in zigbee2mqtt/bridge/devices
   - e.g. 9290012573A in $[1].definition.model in pkg/tests/resources/device_info_example.json
+
+A device whose device-type can not be read from the device-repository (e.g. the mgw mirror is restarting) is not registered and its events are dropped. Such devices are handled again after 1s, the delay doubling up to 1m, until the device-repository answers or a new device list from zigbee2mqtt arrives; once registered, their current values are requested from zigbee2mqtt. A device without matching device-type is not retried.
+
 ### Command Acknowledgement
 
 - `COMMAND_ACK_TIMEOUT` (json `command_ack_timeout`, default `30s`)

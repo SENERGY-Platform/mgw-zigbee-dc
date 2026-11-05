@@ -22,7 +22,6 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
@@ -35,29 +34,94 @@ import (
 	"github.com/SENERGY-Platform/models/go/models"
 )
 
+// devices whose device type could not be read are handled again after this delay, doubled per
+// failed attempt up to deviceRetryMaxDelay; a new device list resets it
+const deviceRetryMinDelay = time.Second
+const deviceRetryMaxDelay = time.Minute
+
 func (this *Connector) startDeviceHandling(ctx context.Context, wg *sync.WaitGroup) error {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		this.config.GetLogger().Info("start device info handling")
+		var failed []model.ZigbeeDeviceInfo
+		var retry <-chan time.Time
+		delay := deviceRetryMinDelay
 		for {
+			var recovered []model.ZigbeeDeviceInfo
+			var err error
+			wasFailing := len(failed) > 0
 			select {
 			case <-ctx.Done():
 				this.config.GetLogger().Info("stop device info handling")
 				return
 			case devices := <-this.deviceupdatebuffer:
-				for _, device := range devices {
-					this.handleDeviceInfoUpdate(device)
-				}
+				// zigbee2mqtt sends the complete list, so it replaces the devices still to be retried
+				failed, recovered, err = this.handleDeviceInfoUpdates(devices, failed)
+				delay = deviceRetryMinDelay
+			case <-retry:
+				failed, recovered, err = this.handleDeviceInfoUpdates(failed, failed)
+				delay = min(2*delay, deviceRetryMaxDelay)
+			}
+			if len(recovered) > 0 {
+				this.refreshEventValues(wg, recovered)
+			}
+			retry = nil
+			if len(failed) > 0 {
+				this.config.GetLogger().Warn("unable to read device types from device repository, retry later", "devices", len(failed), "retry", delay.String(), "error", err)
+				retry = time.After(delay)
+			} else if wasFailing {
+				this.config.GetLogger().Info("device repository readable again, all devices handled")
 			}
 		}
 	}()
 	return nil
 }
 
+// handleDeviceInfoUpdates handles the devices and returns those that have to be retried, with the last
+// error, and the enabled devices of previouslyFailed that are registered now; their event values have to
+// be refreshed, because the events sent while they were not registered, the initial refresh included,
+// were dropped
+func (this *Connector) handleDeviceInfoUpdates(devices []model.ZigbeeDeviceInfo, previouslyFailed []model.ZigbeeDeviceInfo) (failed []model.ZigbeeDeviceInfo, recovered []model.ZigbeeDeviceInfo, err error) {
+	wasFailing := map[string]bool{}
+	for _, device := range previouslyFailed {
+		wasFailing[device.IeeeAddress] = true
+	}
+	for _, device := range devices {
+		result := this.handleDeviceInfoUpdate(device)
+		if result.Retry {
+			failed = append(failed, device)
+			err = result.Err
+			continue
+		}
+		if result.Err == nil && wasFailing[device.IeeeAddress] && !device.Disabled {
+			recovered = append(recovered, device)
+		}
+	}
+	return failed, recovered, err
+}
+
+// refreshEventValues requests the current values of the devices from zigbee2mqtt; in the background,
+// because a publish waits for the broker and would hold up the device list handling
+func (this *Connector) refreshEventValues(wg *sync.WaitGroup, devices []model.ZigbeeDeviceInfo) {
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for _, device := range devices {
+			err := this.zigbee.RefreshDeviceEventValues(device)
+			if err != nil {
+				this.config.GetLogger().Error("unable to refresh event values", "deviceIeeeAddress", device.IeeeAddress, "error", err)
+			}
+		}
+	}()
+}
+
 type DeviceInfoUpdateResult struct {
 	NewDeviceType string
 	Err           error
+	// Retry is set if the device type could not be read from the device repository; handling the device
+	// again later may succeed
+	Retry bool
 }
 
 func (this *DeviceInfoUpdateResult) WithErr(err error) *DeviceInfoUpdateResult {
@@ -93,8 +157,9 @@ func (this *Connector) handleDeviceInfoUpdate(device model.ZigbeeDeviceInfo) *De
 				return result.WithErr(err)
 			}
 		} else if err != nil {
-			this.config.GetLogger().Error("unable to get device type", "deviceIeeeAddress", device.IeeeAddress, "error", err)
-			debug.PrintStack()
+			// logged once per device list by the caller; a stopped device repository fails every device
+			this.config.GetLogger().Debug("unable to get device type", "deviceIeeeAddress", device.IeeeAddress, "error", err)
+			result.Retry = true
 			return result.WithErr(err)
 		}
 		deviceState := this.getDeviceState(device)

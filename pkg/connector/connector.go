@@ -99,6 +99,7 @@ type ZigbeeClient interface {
 	GetDeviceList(ctx context.Context) ([]model.ZigbeeDeviceInfo, error)
 	GetByIeee(ieeeAddress string) ([]byte, error)
 	SetByIeee(ieeeAddress string, pl []byte) error
+	RefreshDeviceEventValues(device model.ZigbeeDeviceInfo) error
 	GetZigbeeMessageOutputStruct(device model.ZigbeeDeviceInfo) (req map[string]interface{})
 	GetZigbeeMessageInputStruct(device model.ZigbeeDeviceInfo) (req map[string]interface{})
 }
