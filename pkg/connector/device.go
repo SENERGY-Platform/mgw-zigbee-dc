@@ -320,12 +320,13 @@ func (this *Connector) zigbeeDeviceToDeviceType(device model.ZigbeeDeviceInfo) (
 	vendor := device.Definition.Vendor
 	m := device.Definition.Model
 	dt = models.DeviceType{
-		Name:          "UNFINISHED zigbee2mqtt " + vendor + " " + m,
+		Name:          "zigbee2mqtt " + vendor + " " + m,
 		DeviceClassId: this.config.CreateMissingDeviceTypesWithDeviceClass,
 		Attributes: []models.Attribute{
 			{Key: devicerepo.AttributeUsedForZigbee, Value: "true"},
 			{Key: devicerepo.AttributeZigbeeVendor, Value: vendor},
 			{Key: devicerepo.AttributeZigbeeModel, Value: m},
+			{Key: devicerepo.AttributeUnfinished, Value: "true"},
 		},
 	}
 	if len(input) > 0 {

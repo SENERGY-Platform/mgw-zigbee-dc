@@ -201,6 +201,9 @@ func (this *DeviceRepo) FindDeviceType(device model.ZigbeeDeviceInfo) (dt model.
 const AttributeZigbeeVendor = "senergy/zigbee-vendor"
 const AttributeZigbeeModel = "senergy/zigbee-model"
 
+// AttributeUnfinished marks a device type that still needs manual completion; value "true".
+const AttributeUnfinished = "unfinished"
+
 func getMatchingDeviceType(devicetypes []model.DeviceType, device model.ZigbeeDeviceInfo) (model.DeviceType, bool) {
 	for _, dt := range devicetypes {
 		attrMap := map[string][]string{}

@@ -258,7 +258,7 @@ func TestDeviceTypeCreation(t *testing.T) {
 		}
 		prepareForTestCompare(&dt, t)
 		expected := models.DeviceType{
-			Name:        "UNFINISHED zigbee2mqtt Philips 9290012573A",
+			Name:        "zigbee2mqtt Philips 9290012573A",
 			Description: "",
 			Services: []models.Service{
 				{
@@ -442,6 +442,7 @@ func TestDeviceTypeCreation(t *testing.T) {
 				{Key: "senergy/zigbee-dc", Value: "true", Origin: ""},
 				{Key: "senergy/zigbee-vendor", Value: "Philips", Origin: ""},
 				{Key: "senergy/zigbee-model", Value: "9290012573A", Origin: ""},
+				{Key: "unfinished", Value: "true", Origin: ""},
 			},
 		}
 		prepareForTestCompare(&expected, nil)
@@ -551,5 +552,23 @@ func prepareForTestCompare(e interface{}, t *testing.T) {
 		sort.Slice(v.SubContentVariables, func(i, j int) bool {
 			return v.SubContentVariables[i].Name < v.SubContentVariables[j].Name
 		})
+	}
+}
+
+func TestZigbeeDeviceToDeviceTypeIsMarkedUnfinished(t *testing.T) {
+	c := &Connector{config: configuration.Config{CreateMissingDeviceTypesWithDeviceClass: "dc-id"}, zigbee: &retryZigbee{}}
+	device := model.ZigbeeDeviceInfo{Definition: model.ZigbeeDeviceInfoDefinition{Vendor: "Philips", Model: "9290012573A"}}
+	dt := c.zigbeeDeviceToDeviceType(device)
+	if dt.Name != "zigbee2mqtt Philips 9290012573A" {
+		t.Errorf("unexpected name: %q", dt.Name)
+	}
+	found := false
+	for _, attr := range dt.Attributes {
+		if attr.Key == devicerepo.AttributeUnfinished && attr.Value == "true" {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("attributes %#v do not contain %s=true", dt.Attributes, devicerepo.AttributeUnfinished)
 	}
 }
